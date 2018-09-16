@@ -37,8 +37,8 @@ class MainWindow(tk.Tk):
     def __init__(self, parameters):
         super().__init__()
         self.iconbitmap('icon.ico')
+        self.resizable(False, False)
         self.parameters = parameters
-
         self.command_stack = CommandStack()
 
         menubar = tk.Menu(self)
