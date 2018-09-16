@@ -121,7 +121,7 @@ class MainWindow(tk.Tk):
         self.parameters.app_config["last_file_path"] = path
 
         log.debug("loading done")
-        self.center_frame.grid_forget()
+        self.center_frame.destroy()
         #reset the command stack
         new_command_stack = CommandStack()
         #TODO: handle last loading failure
