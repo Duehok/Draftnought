@@ -1,0 +1,94 @@
+{
+	"1":{"positions": [[-0.066,-0.634]],
+		"to_bow":true
+		},
+	"2":{"positions": [[0.066,-0.634]],
+		"to_bow":true
+		},
+	"A":{
+		"positions": [[0.0,-0.51], [0.0,-0.57], [0.0,-0.631]],
+		"to_bow":true
+		},
+	"B":{
+		"positions": [[0.0,-0.317], [0.0,-0.451], [0.0,-0.505]],
+		"to_bow":true
+		},
+	"C":{
+		"positions": [[0.0,-0.424]],
+		"to_bow":false
+		},
+	"D":{
+		"positions": [[-0.102,-0.4]],
+		"to_bow":true
+		},
+	"E":{
+		"positions": [[0.102,-0.4]],
+		"to_bow":true
+		},
+	"F":{
+		"positions": [[-0.115,-0.2]],
+		"to_bow":true
+		},
+	"G":{
+		"positions": [[0.115,-0.2]],
+		"to_bow":true
+		},
+	"H":{
+		"positions": [[-0.128,-0.0]],
+		"to_bow":true
+		},
+	"I":{
+		"positions": [[0.128,-0.0]],
+		"to_bow":true
+		},
+	"J":{
+		"positions": [[-0.115,0.2]],
+		"to_bow":false
+		},
+	"K":{
+		"positions": [[0.115,0.2]],
+		"to_bow":false
+		},
+	"L":{
+		"positions": [[0.183,0.2]],
+		"to_bow":true
+		},
+	"Q":{
+		"positions": [[0,-0,-0.0]],
+		"to_bow":false
+		},
+	"S":{
+		"positions": [[-0.102,0.4]],
+		"to_bow":false
+		},
+	"R":{
+		"positions": [[-0.0,0.171]],
+		"to_bow":false
+		},
+	"T":{
+		"positions": [[0.102,0.4]],
+		"to_bow":false
+		},
+	"V":{
+		"positions": [[0.0,0.257]],
+		"to_bow":false
+		},
+	"W":{
+		"positions": [[0.0,0.342], [0.0,0.414]],
+		"to_bow":false
+		},
+	"X":{
+		"positions": [[0.0,0.451], [0.0,0.505]],
+		"to_bow":false
+		},
+	"Y":{
+		"positions": [[0.0,0.502], [0.0,0.560], [0.0,0.626], [0.0,0.692]],
+		"to_bow":false
+		},
+	"3":{"positions": [[-0.066,0.634]],
+		"to_bow":false
+		},
+	"4":{"positions": [[0.066,0.634]],
+		"to_bow":false
+		}
+}
