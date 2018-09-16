@@ -210,7 +210,7 @@ class EditZone(tk.Frame):
         #checked in the callback to only modify the structure if the user edits the fields
         self.inhibit_callbacks = True
 
-        self._point_index_var.set(f"Point {self._point_index}")
+        self._point_index_var.set(f"Vertex {self._point_index}")
         self.editable_x.set(round(self._structure.points[point_index][0], 1))
         self.editable_y.set(round(self._structure.points[point_index][1], 1))
 
