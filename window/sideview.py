@@ -3,6 +3,8 @@
 import tkinter as tk
 from PIL import ImageTk
 
+_WIDTH = 700
+
 class SideView(tk.Frame):
     """Display the side view picture if one is defined in the ship data
 
@@ -21,7 +23,7 @@ class SideView(tk.Frame):
         super().__init__(parent)
         if ship_data.side_pict is not None:
             self._image = ImageTk.PhotoImage(ship_data.side_pict)
-            self._canvas = tk.Canvas(self, width=self._image.width(), height=self._image.height())
+            self._canvas = tk.Canvas(self, width=_WIDTH, height=self._image.height())
             self._canvas.create_image((0, 0), image=self._image, anchor=tk.NW)
             self._canvas.grid()
             self._canvas.bind("<Motion>", self._on_move)

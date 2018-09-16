@@ -7,6 +7,8 @@ import tkinter as tk
 
 _HFUNNELS_TO_HLENGTH = 0.028
 _FUNNEL_OVAL = 1.38
+_WIDTH = 700
+_HEIGHT = 200
 
 class TopView(tk.Canvas):
     """Everything having to do with the area displaying the top view of the ship
@@ -30,8 +32,8 @@ class TopView(tk.Canvas):
                  command_stack,
                  parameters):
         tk.Canvas.__init__(self, parent,
-                           width=ship_data.half_length*2.0,
-                           height=ship_data.half_length*0.5,
+                           width=_WIDTH,
+                           height=_HEIGHT,
                            borderwidth=2,
                            relief="ridge")
 
@@ -123,7 +125,7 @@ class TopView(tk.Canvas):
                 (point[0]*half_length,
                  point[1]*half_length))
                                 for point in line]
-            self.create_line(*converted_points, smooth=True)
+            self.create_line(*converted_points, smooth=True, width=2)
 
     def draw_structure(self, points, fill, selected_index=-1, mouse_xy=(-1, -1)):
         """Draw one structure on the canvas
@@ -141,7 +143,7 @@ class TopView(tk.Canvas):
                 the potential new outline to the pointer is drawn.
         """
         if selected_index != -1:
-            color = "blue"
+            color = "orange"
         else:
             color = "black"
         drawing_ids = []
@@ -149,9 +151,9 @@ class TopView(tk.Canvas):
             converted_points = [self._funnel_to_canvas(point) for point in points]
             if fill:
                 drawing_ids.append(self.create_polygon(*converted_points,
-                                                       fill="cyan", outline=color))
+                                                       fill="cyan", outline=color, width=2))
             else:
-                drawing_ids.append(self.create_line(*converted_points, fill=color))
+                drawing_ids.append(self.create_line(*converted_points, fill=color, width=2))
 
         if mouse_xy != (-1, -1) and selected_index != -1:
             mouse_drawing_verteces = []
@@ -162,7 +164,7 @@ class TopView(tk.Canvas):
                 mouse_drawing_verteces.append(self._funnel_to_canvas(points[selected_index + 1]))
 
             if len(mouse_drawing_verteces) >= 2:
-                drawing_ids.append(self.create_line(*mouse_drawing_verteces, fill="red"))
+                drawing_ids.append(self.create_line(*mouse_drawing_verteces, fill="red", width=2))
         return drawing_ids
 
     def draw_funnel(self, position, oval, mouse_x=-1):
