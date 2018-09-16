@@ -97,7 +97,7 @@ class StructEditor(tk.Frame, Subscriber, Observable):
             self._fill_tree()
         else:
             if self._index_of_sel_point >= len(self._structure.points):
-                self._index_of_sel_point = -1
+                self._index_of_sel_point = len(self._structure.points)
                 self._edit_zone.unset_point()
             self._fill_tree()
         self._notify("focus", {})
@@ -109,13 +109,14 @@ class StructEditor(tk.Frame, Subscriber, Observable):
         Args:
             point (x, y): new position in funnel coordinates
         """
-        if self._index_of_sel_point != -1:
+        if self._index_of_sel_point != -1 and self._index_of_sel_point<=len(self.points)-1:
             self._command_stack.do(model.structure.UpdatePoint(
                 self._structure, self._index_of_sel_point, point[0], point[1]))
+        elif self._index_of_sel_point==len(self.points):
+            self._command_stack.do(model.structure.AddPoint(self._structure, self._index_of_sel_point+1, *point))
 
         if self._index_of_sel_point+1 >= len(self.points):
-            self._command_stack.do(model.structure.AddPoint(
-                self._structure, len(self.points), 0, 0))
+            self._index_of_sel_point = len(self.points)
         else:
             self._force_selection(self._index_of_sel_point+1)
 
