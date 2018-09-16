@@ -38,7 +38,7 @@ class StructEditor(tk.Frame, Subscriber, Observable):
         self._tree.heading("#", text="#")
         self._tree.heading("X", text="\u21d5")
         self._tree.heading("Y", text="\u21d4")
-        self._tree.grid(row=0, column=POINTS_TABLE_COL)
+        self._tree.grid(row=0, column=POINTS_TABLE_COL, sticky=tk.N+tk.S)
 
         self._tree.bind("<<TreeviewSelect>>", self._on_point_selected)
         self._tree.bind("<FocusIn>", self._on_get_focus)
@@ -109,12 +109,13 @@ class StructEditor(tk.Frame, Subscriber, Observable):
         Args:
             point (x, y): new position in funnel coordinates
         """
-        if self._index_of_sel_point != -1 and self._index_of_sel_point<=len(self.points)-1:
+        if self._index_of_sel_point != -1 and self._index_of_sel_point <= len(self.points)-1:
             self._command_stack.do(model.structure.UpdatePoint(
                 self._structure, self._index_of_sel_point, point[0], point[1]))
-        elif self._index_of_sel_point==len(self.points):
-            self._command_stack.do(model.structure.AddPoint(self._structure, self._index_of_sel_point+1, *point))
-
+        elif self._index_of_sel_point == len(self.points):
+            self._command_stack.do(model.structure.AddPoint(self._structure,
+                                                            self._index_of_sel_point+1,
+                                                            *point))
         if self._index_of_sel_point+1 >= len(self.points):
             self._index_of_sel_point = len(self.points)
         else:
@@ -150,7 +151,9 @@ class EditZone(tk.Frame):
     POINT_INDEX_ROW = FILL_CHECK_ROW+1
     X_ROW = POINT_INDEX_ROW+1
     Y_ROW = X_ROW+1
-    ADD_DEL_ROW = Y_ROW+1
+    ADD_ROW = Y_ROW+1
+    DEL_ROW = ADD_ROW+1
+    SYMM_ROW = DEL_ROW+1
 
     def __init__(self, parent, structure, command_stack, on_get_focus):
         tk.Frame.__init__(self, parent)
@@ -169,8 +172,8 @@ class EditZone(tk.Frame):
         (Label(self, textvariable=self._point_index_var)
          .grid(row=EditZone.POINT_INDEX_ROW, column=0, columnspan=2))
 
-        Label(self, text="\u21d5:").grid(row=EditZone.X_ROW, column=0, sticky = tk.E)
-        Label(self, text="\u21d4:").grid(row=EditZone.Y_ROW, column=0, sticky = tk.E)
+        Label(self, text="\u21d5:").grid(row=EditZone.X_ROW, column=0, sticky=tk.E)
+        Label(self, text="\u21d4:").grid(row=EditZone.Y_ROW, column=0, sticky=tk.E)
 
         #the updating_ booleans allow to detect if the stringvars are edited
         #because the point is selected
@@ -183,18 +186,18 @@ class EditZone(tk.Frame):
         setx.grid(row=EditZone.X_ROW, column=1, sticky=tk.W)
         setx.bind("<FocusIn>", on_get_focus)
         sety = Entry(self, textvariable=self.editable_y, width=6)
-        sety.grid(row=EditZone.Y_ROW, column=1,  sticky=tk.W)
+        sety.grid(row=EditZone.Y_ROW, column=1, sticky=tk.W)
         sety.bind("<FocusIn>", on_get_focus)
 
         self.editable_x.trace_add("write", self._point_edited)
         self.editable_y.trace_add("write", self._point_edited)
 
-        add_delete = tk.Frame(self)
-        Button(add_delete, text="Add Point", command=self._add_point).grid()
-        Button(add_delete, text="Delete", command=self._delete_point).grid(row=0, column=1)
-        Button(add_delete, text="Apply Symmetry", command=self._apply_symmetry).grid(row=1, column=0, columnspan=2)
-
-        add_delete.grid(row=EditZone.ADD_DEL_ROW, column=0, columnspan=2)
+        (Button(self, text="Add Point", command=self._add_point)
+         .grid(row=EditZone.ADD_ROW, column=0, columnspan=2))
+        (Button(self, text="Delete", command=self._delete_point)
+         .grid(row=EditZone.DEL_ROW, column=0, columnspan=2))
+        (Button(self, text="Apply Symmetry", command=self._apply_symmetry)
+         .grid(row=EditZone.SYMM_ROW, column=0, columnspan=2))
 
     def set_editable_point(self, point_index):
         """Called when another point is selected
