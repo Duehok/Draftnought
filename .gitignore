@@ -3,3 +3,4 @@
 model/__pycache__/*
 window/__pycache__/*
 __pycache__/*
+app_config.json
