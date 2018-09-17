@@ -14,11 +14,6 @@ from window.framework import CommandStack
 import model.shipdata as sd
 import parameters_loader
 
-log = logging.getLogger()
-out_hdlr = logging.StreamHandler(sys.stdout)
-log.addHandler(out_hdlr)
-log.setLevel(logging.DEBUG)
-
 _SIDEVIEW_ROW = 0
 _TOPVIEW_ROW = _SIDEVIEW_ROW+1
 _SIDEVIEW_COL = 1
@@ -84,11 +79,11 @@ class MainWindow(tk.Tk):
 
     def do_load(self, *_args):
         """React to keyboard shortcut"""
-        log.debug("Load file requested")
+        logging.debug("Load file requested")
         path = filedialog.askopenfilename(filetypes=(("ship files", "*.?0d"),
                                                      ("all files", "*.*")))
         if path == "":
-            log.debug("Load canceled")
+            logging.debug("Load canceled")
             return
         else:
             self.load(path)
@@ -109,18 +104,18 @@ class MainWindow(tk.Tk):
             path (str): ship file's path.
                 If none is given, a dialog box is opened to choose it.
         """
-        log.debug("loading %s", path)
+        logging.debug("loading %s", path)
         try:
             with open(path) as file:
                 self.current_ship_data = sd.ShipData(file, self.parameters)
         except sd.ShipFileInvalidException as error:
-            log.error(error)
+            logging.error(error)
             messagebox.showerror(f"Could not load file {pathlib.Path(path).name}", error)
             return
 
         self.parameters.app_config["last_file_path"] = path
 
-        log.debug("loading done")
+        logging.debug("loading done")
         self.center_frame.destroy()
         #reset the command stack
         new_command_stack = CommandStack()
@@ -147,18 +142,18 @@ class MainWindow(tk.Tk):
             file = filedialog.asksaveasfile(mode='w', filetypes=(("ship files", "*.*d"),
                                                                  ("all files", "*.*")))
             if file is not None:
-                log.debug("saving file to %s", file.name)
+                logging.debug("saving file to %s", file.name)
                 self.current_ship_data.write_as_ini(file_object=file)
                 self.parameters.app_config["last_file_path"] = file.name
                 file.close()
                 self.parameters.write_app_param()
         else:
-            log.debug("saving file to %s", path)
+            logging.debug("saving file to %s", path)
             try:
                 with open(path, "w") as file:
                     self.current_ship_data.write_as_ini(file_object=file)
             except OSError as error:
-                log.error("Could not save file:\n%s", error)
+                logging.error("Could not save file:\n%s", error)
             self.parameters.app_config["last_file_path"] = path
             self.parameters.write_app_param()
 
@@ -200,4 +195,5 @@ class ShipEditor(tk.Frame):
          .grid(row=_SIDEVIEW_ROW, column=_SIDEVIEW_COL, sticky=tk.W))
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG,stream=sys.stdout )
     MainWindow(parameters_loader.Parameters()).mainloop()
