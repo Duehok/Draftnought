@@ -86,9 +86,9 @@ class ShipData:
             try:
                 self.side_pict = Image.open(pict_path)
             except OSError:
-                self.side_pict = None
+                self.side_pict = Image.new("RGBA", (1, 1), color=(0, 0, 0, 0))
         else:
-            self.side_pict = None
+            self.side_pict = Image.new("RGBA", (1, 1), color=(0, 0, 0, 0))
 
     def write_as_ini(self, file_object=None, file_path=None):
         """Write the ship data in a RTW-readable format to the given file path or file object
@@ -154,7 +154,8 @@ class Turret:
                 rel_position = parameters.turrets_positions[pos]["positions"][1]
 
         elif pos == "Y":
-            if (("X" in all_turrs and "W" in all_turrs.keys()) or ("V" in all_turrs and "W"in all_turrs)):
+            if (("X" in all_turrs and "W" in all_turrs.keys()) or
+                    ("V" in all_turrs and "W"in all_turrs)):
                 rel_position = parameters.turrets_positions[pos]["positions"][3]
             elif ("V" in all_turrs or "W" in all_turrs or
                   ({"A", "B", "C"}.issubset(all_turrs)) or
@@ -164,7 +165,7 @@ class Turret:
                 rel_position = parameters.turrets_positions[pos]["positions"][1]
 
         position = (rel_position[0]*ship_hlength, rel_position[1]*ship_hlength)
-        raw_outline = parameters.turrets_outlines[guns-1]
+        raw_outline = parameters.turrets_outlines[guns]
         #rotate if the turret should be backward
         if not to_bow:
             rotated_outline = [(point[0], -point[1]) for point in raw_outline]

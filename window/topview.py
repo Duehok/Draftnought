@@ -4,11 +4,12 @@
    TODO: add a Drawing interface that supports reorder
 """
 import tkinter as tk
+from window.sideview import make_grid
 
 _HFUNNELS_TO_HLENGTH = 0.028
 _FUNNEL_OVAL = 1.38
-_WIDTH = 700
-_HEIGHT = 200
+_WIDTH = 701
+_HEIGHT = 201
 
 class TopView(tk.Canvas):
     """Everything having to do with the area displaying the top view of the ship
@@ -55,6 +56,9 @@ class TopView(tk.Canvas):
             funnel_editor.subscribe(self._on_notification)
 
         self._turrets = ship_data.turrets
+
+        self._grid = make_grid(self.winfo_reqwidth(), self.winfo_reqheight(), horizontal=True)
+        self._grid_on = False
 
         self.redraw()
         self.bind("<Motion>", self._on_mouse_move)
@@ -192,13 +196,13 @@ class TopView(tk.Canvas):
             (__, mouse_funnel) = self._canvas_to_funnel((mouse_x, 0))
             vertex1_canvas = self._funnel_to_canvas((0-self._funnel_half_width, mouse_funnel-delta))
             vertex2_canvas = self._funnel_to_canvas((0+self._funnel_half_width, mouse_funnel+delta))
-            drawing_ids.append(self.create_oval(*vertex1_canvas, *vertex2_canvas, 
+            drawing_ids.append(self.create_oval(*vertex1_canvas, *vertex2_canvas,
                                                 fill="red", stipple="gray25"))
         return drawing_ids
 
     def _draw_turret(self, turret):
         canvas_outline = [self._funnel_to_canvas(point) for point in turret.outline]
-        return [self.create_polygon(*canvas_outline, fill="green")]
+        return [self.create_polygon(*canvas_outline, fill="green", outline="black")]
 
     def redraw(self, active_editor=None):
         """Redraw all the canvas elements, except the hul outline
@@ -249,6 +253,9 @@ class TopView(tk.Canvas):
         for turret in self._turrets:
             self._drawings_ids = self._drawings_ids + self._draw_turret(turret)
 
+        if self._grid_on:
+            self._drawings_ids.append(self.create_image((0, 0), image=self._grid, anchor=tk.NW))
+
     def _on_mouse_move(self, _event):
         self.redraw(self._active_editor)
 
@@ -259,3 +266,8 @@ class TopView(tk.Canvas):
     def _on_left_click(self, event):
         if self._active_editor is not None:
             self._active_editor.update_to_coord(self._canvas_to_funnel((event.x, event.y)))
+
+    def switch_grid(self, grid_on):
+        """Add or remove the grid according to the state of grid_on"""
+        self._grid_on = grid_on
+        self.redraw()

@@ -20,11 +20,12 @@ TURRETS_POSITION_SCHEMA = (
             "type": "array",
             "items":
             {
-              "types":"array",
-              "items":[{ "type":"number"},{ "type":"number"}]
+              "items":[{ "type":"number"},{ "type":"number"}],
+              "additionalItems":False
             },
             "maxItems":4,
-            "minItems":1
+            "minItems":1,
+            "additionalItems":False
           }
         }
       }
@@ -126,4 +127,31 @@ HALF_LENGTHS_SCHEMA = (
   },
   "required":SHIP_TYPES
 })
-DEFAULT_HALF_LENGTHS = {ship_type:{2000000:200} for ship_type in SHIP_TYPES}
+DEFAULT_HALF_LENGTHS = {ship_type:{"2000000":200} for ship_type in SHIP_TYPES}
+
+RECENT_FILES_SCHEMA = (
+  {
+    "$schema" : "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "additionalProperties":
+    {
+      "type": "object",
+      "properties":
+      {
+        "zoom":{"type":"number"},
+        "offset":
+        {
+          "type":"array",
+          "items":
+          [
+            {"type":"number"}, {"type":"number"}
+          ],
+          "additionalItems": False
+        }
+      },
+      "additionalProperties": False
+    }
+  }
+)
+
+DEFAULT_RECENT_FILES ={}
