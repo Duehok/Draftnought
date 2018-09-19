@@ -1,7 +1,11 @@
+import appdirs
+import pathlib
+
 #Turret positions
 TURRETS = ["1", "2", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L",
            "Q", "R", "S", "T", "V", "W", "X", "Y", "3", "4"]
 
+TURRETS_POSITION_PATH = "./data/turrets_positions.json"
 TURRETS_POSITION_SCHEMA = (
 {
   "$schema" : "http://json-schema.org/draft-04/schema#",
@@ -40,6 +44,7 @@ DEFAULT_TURRETS_POSITION = {turret:_DEFAULT_TURRET_POSITION for turret in TURRET
 
 #turret outlines
 MAX_GUNS_PER_TURRET = 4
+TURRETS_OUTLINES_PATH = "./data/turrets_outlines.json"
 TURRETS_OUTLINE_SCHEMA =(
 {
   "$schema" : "http://json-schema.org/draft-04/schema#",
@@ -66,6 +71,7 @@ DEFAULT_TURRETS_OUTLINE = [_DEFAULT_TURRET_OUTLINE for i in range(MAX_GUNS_PER_T
 
 #turret scale
 MIN_MAX_GUN_CALIBER = 18
+TURRETS_SCALE_PATH = "./data/turrets_scale.json"
 TURRETS_SCALE_SCHEMA =(
 {
   "$schema" : "http://json-schema.org/draft-04/schema#",
@@ -85,6 +91,7 @@ DEFAULT_TURRETS_SCALE = [0.22, 0.26, 0.306, 0.347, 0.387, 0.422, 0.458, 0.536,
 
 #hull shapes
 SHIP_TYPES = ["BB", "BC", "B", "CA", "CL", "DD", "MS", "AMC"]
+HULLS_SHAPES_PATH= "./data/hull_shapes.json"
 HULLS_SHAPES_SCHEMA = (
 {
   "$schema" : "http://json-schema.org/draft-04/schema#",
@@ -110,7 +117,7 @@ HULLS_SHAPES_SCHEMA = (
 })
 DEFAULT_HULLS_SHAPES = {ship_type:[[[100, 100],[-100, 100],[-100, -100],[100, -100]]] for ship_type in SHIP_TYPES}
 
-
+HALF_LENGTHS_PATH = "./data/lengths.json"
 HALF_LENGTHS_SCHEMA = (
 {
   "$schema" : "http://json-schema.org/draft-04/schema#",
@@ -129,6 +136,7 @@ HALF_LENGTHS_SCHEMA = (
 })
 DEFAULT_HALF_LENGTHS = {ship_type:{"2000000":200} for ship_type in SHIP_TYPES}
 
+RECENT_FILES_PATH = pathlib.Path(appdirs.user_data_dir("Draftnought")).joinpath("recent_files.json")
 RECENT_FILES_SCHEMA = (
   {
     "$schema" : "http://json-schema.org/draft-04/schema#",
@@ -139,6 +147,7 @@ RECENT_FILES_SCHEMA = (
       "properties":
       {
         "zoom":{"type":"number"},
+        "grid":{"type":"boolean"},
         "offset":
         {
           "type":"array",
@@ -149,9 +158,15 @@ RECENT_FILES_SCHEMA = (
           "additionalItems": False
         }
       },
-      "additionalProperties": False
+      "additionalProperties": False,
+      "required":["zoom", "grid", "offset"]
     }
   }
 )
 
 DEFAULT_RECENT_FILES ={}
+DEFAULT_PARAM = {
+    "zoom":1.2571630183484306,
+    "offset":(-48, -40),
+    "grid":True
+}

@@ -86,9 +86,9 @@ class ShipData:
             try:
                 self.side_pict = Image.open(pict_path)
             except OSError:
-                self.side_pict = Image.new("RGBA", (1, 1), color=(0, 0, 0, 0))
+                self.side_pict = None
         else:
-            self.side_pict = Image.new("RGBA", (1, 1), color=(0, 0, 0, 0))
+            self.side_pict = None
 
     def write_as_ini(self, file_object=None, file_path=None):
         """Write the ship data in a RTW-readable format to the given file path or file object

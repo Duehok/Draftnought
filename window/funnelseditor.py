@@ -28,13 +28,20 @@ class FunnelEditor(tk.Frame, Subscriber, Observable):
         self._oval_var.trace_add("write", self._switch_oval)
 
         self._update()
+        self.bind("<Button-1>", self._update)
 
-        Checkbutton(self, text=f"Funnel n°{index}:  ", variable=self._active_var).pack(side=tk.LEFT)
-        Label(self, text="  Position: ").pack(side=tk.LEFT)
+        Checkbutton(self, text=f"Funnel n°{index}:  ", variable=self._active_var).grid(columnspan=3)
+        pos_label = Label(self, text="  Position: ")
+        pos_label.grid(sticky=tk.E)
+        pos_label.bind("<Button-1>", self._update)
         pos_entry = Entry(self, textvariable=self._position_var, width=6)
-        pos_entry.pack(side=tk.LEFT)
+        pos_entry.grid(row=1, column=1, sticky=tk.W)
         pos_entry.bind("<FocusIn>", self._update)
-        Checkbutton(self, text="Is Oval", variable=self._oval_var).pack(side=tk.LEFT)
+        Checkbutton(self, text="Is Oval", variable=self._oval_var).grid(row=1,column=2)
+
+        self.columnconfigure(0, weight=1)
+        self.columnconfigure(1, weight=1)
+        self.columnconfigure(2, weight=1)
 
     def _on_notification(self, observable, event_type, event_info):
         self._update()

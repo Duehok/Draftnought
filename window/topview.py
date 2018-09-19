@@ -36,7 +36,7 @@ class TopView(tk.Canvas):
                            width=_WIDTH,
                            height=_HEIGHT,
                            borderwidth=2,
-                           relief="ridge")
+                           relief="ridge", cursor="crosshair")
 
         self.command_stack = command_stack
 
@@ -239,11 +239,10 @@ class TopView(tk.Canvas):
         for editor in self._funnel_editors:
             if editor == active_editor:
                 editor.configure(relief="sunken")
-                if editor.position != 0:
-                    self._drawings_ids = (self._drawings_ids
-                                          + self.draw_funnel(editor.position,
-                                                             editor.oval,
-                                                             mouse_rel_pos[0]))
+                self._drawings_ids = (self._drawings_ids
+                                        + self.draw_funnel(editor.position,
+                                                            editor.oval,
+                                                            mouse_rel_pos[0]))
             else:
                 editor.configure(relief="raised")
                 if editor.position != 0:

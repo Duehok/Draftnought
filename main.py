@@ -22,7 +22,7 @@ log_filename = pathlib.Path(appdirs.user_data_dir("Drafnought")).joinpath("log.t
 if not log_filename.exists():
     log_filename.parent.mkdir(parents=True, exist_ok=True)
 details = logging.getLogger("Details")
-details.setLevel(logging.DEBUG)
+details.setLevel(logging.WARNING)
 file_handler = logging.handlers.RotatingFileHandler(
     log_filename, maxBytes=500*1000, backupCount=5)
 details.addHandler(file_handler)
@@ -37,9 +37,9 @@ _TOPVIEW_ROW = _SIDEVIEW_ROW+1
 _SIDEVIEW_COL = 1
 _TOPVIEW_COL = _SIDEVIEW_COL
 
-_FUNNELS_ROW = _TOPVIEW_ROW
+_FUNNELS_ROW = _TOPVIEW_ROW+1
 
-_STRUCT_EDITORS_ROW = _TOPVIEW_ROW+1
+_STRUCT_EDITORS_ROW = _FUNNELS_ROW+1
 
 class MainWindow(tk.Tk):
     """Base class for the whole UI
@@ -65,6 +65,8 @@ class MainWindow(tk.Tk):
 
         logging_frame.grid(row=_LOG_ROW, sticky=tk.W+tk.E)
 
+        self.parameters = parameters_loader.Parameters("")
+
         menubar = tk.Menu(self)
         self.config(menu=menubar)
 
@@ -78,16 +80,21 @@ class MainWindow(tk.Tk):
         editmenu.add_command(label='Undo', command=self.do_undo, accelerator="Ctrl+Z")
         editmenu.add_command(label='Redo', command=self.do_redo, accelerator="Ctrl+Y")
 
+        viewmenu = tk.Menu(menubar, tearoff=0)
+        self.grid_var = tk.IntVar()
+        self.grid_var.set(int(self.parameters.grid))
+        self.grid_var.trace_add("write", self._set_grid)
+        viewmenu.add_checkbutton(label="Grid", variable=self.grid_var)
+
         menubar.add_cascade(label='File', menu=filemenu)
         menubar.add_cascade(label='Edit', menu=editmenu)
+        menubar.add_cascade(label='View', menu=viewmenu)
 
         self.bind("<Control-s>", self.do_save)
         self.bind("<Control-o>", self.do_load)
         self.bind("<Control-S>", self.do_save_as_keyboard)
         self.bind("<Control-z>", self.do_undo)
         self.bind("<Control-y>", self.do_redo)
-
-        self.parameters = parameters_loader.Parameters("")
 
         self.center_frame = ttk.Button(self, text="Load ship file", command=self.do_load)
         self.center_frame.grid(row=_MAIN_ROW)
@@ -97,6 +104,11 @@ class MainWindow(tk.Tk):
                 self.load(file.name)
         except OSError:
             return
+
+    def _set_grid(self, _var_name, _list_index, _operation):
+        self.parameters.grid = bool(self.grid_var.get())
+        if isinstance(self.center_frame, ShipEditor):
+            self.center_frame.set_grid(bool(self.grid_var.get()))
 
     def do_undo(self, *_args):
         """undo last command, or deeper in the undoing stack
@@ -156,6 +168,7 @@ class MainWindow(tk.Tk):
         self.center_frame.grid(row=_MAIN_ROW)
         #if load was OK, forget the old command stack
         self.command_stack = new_command_stack
+        self.grid_var.set(int(self.parameters.grid))
         self.winfo_toplevel().title(pathlib.Path(path).name)
 
     def do_save_as(self, path=None):
@@ -201,38 +214,30 @@ class ShipEditor(tk.Frame):
     def __init__(self, parent, ship_data, command_stack, parameters):
         super().__init__(parent)
 
-        funnels_frame = tk.Frame(self)
         funnels_editors = []
         for index, funnel in enumerate(ship_data.funnels.values()):
-            funnel_editor = funnelseditor.FunnelEditor(funnels_frame, funnel, index, command_stack)
-            funnel_editor.pack()
+            funnel_editor = funnelseditor.FunnelEditor(self, funnel, index, command_stack)
+            funnel_editor.grid(row=_FUNNELS_ROW, column=index, sticky=tk.W+tk.E)
             funnels_editors.append(funnel_editor)
-        funnels_frame.grid(row=_FUNNELS_ROW, column=0, sticky=tk.S)
-        struct_frame = tk.Frame(self)
         index_structure = 0
         st_editors = []
         for index_structure, structure in enumerate(ship_data.structures):
-            new_st_display = structeditor.StructEditor(struct_frame, structure, command_stack)
-            new_st_display.grid(row=0, column=index_structure)
+            new_st_display = structeditor.StructEditor(self, structure, command_stack)
+            new_st_display.grid(row=_STRUCT_EDITORS_ROW, column=index_structure)
             st_editors.append(new_st_display)
-        struct_frame.grid(row=_STRUCT_EDITORS_ROW, column=0, columnspan=2)
 
         self._top_view = topview.TopView(self, ship_data, st_editors,
                                          funnels_editors, command_stack, parameters)
-        self._top_view.grid(row=_TOPVIEW_ROW, column=_TOPVIEW_COL, sticky=tk.W)
+        self._top_view.grid(row=_TOPVIEW_ROW, columnspan=4)
 
         st_editors[0]._on_get_focus()
 
         self._side_view = sideview.SideView(self, ship_data, parameters)
-        self._side_view.grid(row=_SIDEVIEW_ROW, column=_SIDEVIEW_COL, sticky=tk.W)
+        self._side_view.grid(row=_SIDEVIEW_ROW, columnspan=4)
 
-        self._grid_var = tk.IntVar()
-        (ttk.Checkbutton(self, text="Grid", variable=self._grid_var, command=self._switch_grid).
-         grid(row=_SIDEVIEW_ROW, column=0))
-
-    def _switch_grid(self):
-        self._side_view.switch_grid(bool(self._grid_var.get()))
-        self._top_view.switch_grid(bool(self._grid_var.get()))
+    def set_grid(self, grid_state):
+        self._side_view.switch_grid(grid_state)
+        self._top_view.switch_grid(grid_state)
 
 
 class LogToWidget(logging.Handler):

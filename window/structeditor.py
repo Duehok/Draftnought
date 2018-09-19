@@ -25,6 +25,8 @@ class StructEditor(tk.Frame, Subscriber, Observable):
         self._structure = structure
         self._command_stack = command_stack
 
+        self.bind("<Button-1>", self._on_get_focus)
+
         self._tree = Treeview(self, columns=["#", "X", "Y"], selectmode="browse")
         #kill the icon column
         self._tree.column("#0", minwidth=0, width=0)
@@ -45,6 +47,8 @@ class StructEditor(tk.Frame, Subscriber, Observable):
 
         scroll = Scrollbar(self, command=self._tree.yview)
         scroll.grid(row=0, column=SCROLL_COL, sticky=tk.N+tk.S)
+        scroll.bind("<FocusIn>", self._on_get_focus)
+
         self._tree.configure(yscrollcommand=scroll.set)
 
         self._index_of_sel_point = -1
@@ -112,14 +116,16 @@ class StructEditor(tk.Frame, Subscriber, Observable):
         if self._index_of_sel_point != -1 and self._index_of_sel_point <= len(self.points)-1:
             self._command_stack.do(model.structure.UpdatePoint(
                 self._structure, self._index_of_sel_point, point[0], point[1]))
-        elif self._index_of_sel_point == len(self.points):
+        elif self._index_of_sel_point == len(self.points) or not self.points:
             self._command_stack.do(model.structure.AddPoint(self._structure,
                                                             self._index_of_sel_point+1,
                                                             *point))
         if self._index_of_sel_point+1 >= len(self.points):
+            self.winfo_toplevel().update()
             self._index_of_sel_point = len(self.points)
         else:
             self._force_selection(self._index_of_sel_point+1)
+            self.winfo_toplevel().update()
 
     @property
     def points(self):
@@ -169,12 +175,16 @@ class EditZone(tk.Frame):
 
         self._point_index = -1
         self._point_index_var = tk.StringVar()
-        (Label(self, textvariable=self._point_index_var)
-         .grid(row=EditZone.POINT_INDEX_ROW, column=0, columnspan=2))
+        top_label = Label(self, textvariable=self._point_index_var)
+        top_label.grid(row=EditZone.POINT_INDEX_ROW, column=0, columnspan=2)
+        top_label.bind("<Button-1>", on_get_focus)
 
-        Label(self, text="\u21d5:").grid(row=EditZone.X_ROW, column=0, sticky=tk.E)
-        Label(self, text="\u21d4:").grid(row=EditZone.Y_ROW, column=0, sticky=tk.E)
-
+        x_label = Label(self, text="\u21d5:")
+        x_label.grid(row=EditZone.X_ROW, column=0, sticky=tk.E)
+        x_label.bind("<Button-1>", on_get_focus)
+        y_label = Label(self, text="\u21d4:")
+        y_label.grid(row=EditZone.Y_ROW, column=0, sticky=tk.E)
+        y_label.bind("<Button-1>", on_get_focus)
         #the updating_ booleans allow to detect if the stringvars are edited
         #because the point is selected
         #or if the user changed their value
