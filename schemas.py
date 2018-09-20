@@ -3,7 +3,7 @@ import pathlib
 
 #Turret positions
 TURRETS = ["1", "2", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L",
-           "Q", "R", "S", "T", "V", "W", "X", "Y", "3", "4"]
+           "P", "Q", "R", "S", "T", "V", "W", "X", "Y", "3", "4"]
 
 TURRETS_POSITION_PATH = "./data/turrets_positions.json"
 TURRETS_POSITION_SCHEMA = (
@@ -64,15 +64,39 @@ TURRETS_OUTLINE_SCHEMA =(
   "minItems":MAX_GUNS_PER_TURRET+1
 })
 
-_DEFAULT_TURRET_OUTLINE = [[-7.4, 12.9], [-10, -0.1], [-6.5, -7.4], [-1.2, -9.6],
-                          [-0.7, -30], [0.7, -30], [1.2, -9.6], [6.5, -7.4], [10, -0], [7.4, 12.9]]
+_DEFAULT_TURRET_OUTLINE = [(-7.4, 12.9), (-10, -0.1), (-6.5, -7.4), (-1.2, -9.6),
+                          (-0.7, -30), (0.7, -30), (1.2, -9.6), (6.5, -7.4), (10, -0), (7.4, 12.9)]
 
 DEFAULT_TURRETS_OUTLINE = [_DEFAULT_TURRET_OUTLINE for i in range(MAX_GUNS_PER_TURRET+1)]
+
+MAX_TORP_PER_MOUNT = 5
+TORPEDO_OUTLINES_PATH = "./data/torpedo_outlines.json"
+TORPEDO_OUTLINES_SCHEMA = (
+{
+  "$schema" : "http://json-schema.org/draft-04/schema#",
+  "type":"array",
+  "items":
+  {
+    "type":"array",
+    "items":
+    {
+      "type":"array",
+      "items":[{"type":"number"}],
+      "maxItems":2,
+      "minItems":2
+    }
+  },
+  "maxItems":MAX_TORP_PER_MOUNT,
+  "minItems":MAX_TORP_PER_MOUNT
+})
+
+_DEFAULT_TORPEDO_OUTLINE = [(-1, -5), (1,-5), (1,5), (-1,5)]
+DEFAULT_TORPEDO_OUTLINES = [_DEFAULT_TURRET_OUTLINE for i in range(MAX_TORP_PER_MOUNT)]
 
 #turret scale
 MIN_MAX_GUN_CALIBER = 18
 TURRETS_SCALE_PATH = "./data/turrets_scale.json"
-TURRETS_SCALE_SCHEMA =(
+TURRETS_SCALE_SCHEMA = (
 {
   "$schema" : "http://json-schema.org/draft-04/schema#",
   "type":"array",
@@ -148,15 +172,7 @@ RECENT_FILES_SCHEMA = (
       {
         "zoom":{"type":"number"},
         "grid":{"type":"boolean"},
-        "offset":
-        {
-          "type":"array",
-          "items":
-          [
-            {"type":"number"}, {"type":"number"}
-          ],
-          "additionalItems": False
-        }
+        "offset":{"type":"number"}
       },
       "additionalProperties": False,
       "required":["zoom", "grid", "offset"]
@@ -166,7 +182,7 @@ RECENT_FILES_SCHEMA = (
 
 DEFAULT_RECENT_FILES ={}
 DEFAULT_PARAM = {
-    "zoom":1.2571630183484306,
-    "offset":(-48, -40),
+    "zoom":1.2571630183484306*257,
+    "offset":350,
     "grid":True
 }

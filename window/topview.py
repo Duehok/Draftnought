@@ -1,7 +1,6 @@
 """Everything that has to do with the view from top of the ship.
 
    Includes the main TopView canvas and all the commands that are started from there.
-   TODO: add a Drawing interface that supports reorder
 """
 import tkinter as tk
 from window.sideview import make_grid
@@ -20,11 +19,11 @@ class TopView(tk.Canvas):
     Args:
         parent (tk.Frame): the parent of the canvas
         ship_data (shipdata.ShipData):
+        struct_editors (list): all superstructure editors
+            that can impact the drawings of the superstructures
+        funnel_editors (list): as the struct editors but for funnels
+        command_stack (ComandStack): the undo/redo command stack common to the whole program
         parameters (parameters_loader.Parameters): set of data to draw the ship.
-        width (int): the width of the canvas, in pixels (I think)
-            default to the length of the ship
-        height (int): the height of the canvas, in pixels (I think)
-            default to 1/4 of the length of the ship
     """
     def __init__(self, parent,
                  ship_data,
@@ -42,7 +41,7 @@ class TopView(tk.Canvas):
 
         self._funnel_to_canvas, self._canvas_to_funnel = self.make_converters(ship_data.half_length)
 
-        self.display_hull(parameters.hulls_shapes, ship_data.ship_type, ship_data.half_length)
+        self._display_hull(parameters.hulls_shapes[ship_data.ship_type], ship_data.half_length)
         self._drawings_ids = []
         self._active_editor = None
 
@@ -55,7 +54,7 @@ class TopView(tk.Canvas):
         for funnel_editor in funnel_editors:
             funnel_editor.subscribe(self._on_notification)
 
-        self._turrets = ship_data.turrets
+        self._turrets = ship_data.turrets_torps
 
         self._grid = make_grid(self.winfo_reqwidth(), self.winfo_reqheight(), horizontal=True)
         self._grid_on = False
@@ -67,17 +66,17 @@ class TopView(tk.Canvas):
         self.bind("<Button-1>", self._on_left_click)
 
     def make_converters(self, half_length):
-        """give a converter from funnel to canvas coordinates
+        """give converters from funnel to canvas coordinates and vice-versa
 
         scaled so that the full length of the ship fits exactly the width of the canvas
         Args:
-            width (int): the width of the canvas in pixels.
-                Cannot use winfo_width because the widget might not yet have been updated
-                in the mainloop or with tkinter's update()
-            height (int): the height of the canvas in pixels, same remark as for width
+            half_length (number): the half-length of the ship.
+                The converters are set up so that if fits neatly in the canvas
 
         Returns:
-            a converter function
+            a tupple of two converter functions:
+                funnel to canvas
+                canvas ti funnel
         """
         coord_factor = (self.winfo_reqwidth()/2.1)/half_length
         xoffset = self.winfo_reqwidth()/2.0
@@ -111,27 +110,23 @@ class TopView(tk.Canvas):
 
         return (funnel_to_canvas, canvas_to_funnel)
 
-    def display_hull(self, hulls_shapes, ship_type, half_length):
-        """draw the hull outlines according to the ship type
-
-            uses the ship type from the ship data
-            does NOT checlk if the ship type is actually present in the list of hull shapes
-            runtime crash if missing
-            the parameters_loaders is supposed to give correct default values if not defined in the
-            external files, but if the data is present but wrong, runtime crash
+    def _display_hull(self, hull_shape, half_length):
+        """draw the hull outlines according to the ship type and half length
 
         Args:
-            hulls_shapes (dict): all hull shapes from the parameters,
-                see parameters_loard for more info
+            huls_shape (dict): list of list of (x,y) tuples
+                that define the lines that make the hull's outline
+                in relative coordinates
+            half_length: the half-length of the ship to go from relative to funnel coordinates
         """
-        for line in hulls_shapes[ship_type]:
+        for line in hull_shape:
             converted_points = [self._funnel_to_canvas(
                 (point[0]*half_length,
                  point[1]*half_length))
                                 for point in line]
             self.create_line(*converted_points, smooth=True, width=2)
 
-    def draw_structure(self, points, fill, selected_index=-1, mouse_xy=(-1, -1)):
+    def _draw_structure(self, points, fill, selected_index=-1, mouse_xy=(-1, -1)):
         """Draw one structure on the canvas
 
         If the structure is active, draws the potential new outline to the cursor position
@@ -171,7 +166,7 @@ class TopView(tk.Canvas):
                 drawing_ids.append(self.create_line(*mouse_drawing_verteces, fill="red", width=2))
         return drawing_ids
 
-    def draw_funnel(self, position, oval, mouse_x=-1):
+    def _draw_funnel(self, position, oval, mouse_x=-1):
         """Draw one funnel on the canvas
 
         If the funnel is active, draws the potential new outline to the cursor position
@@ -227,27 +222,27 @@ class TopView(tk.Canvas):
             if editor == active_editor:
                 editor.configure(relief="sunken")
                 self._drawings_ids = (self._drawings_ids
-                                      + self.draw_structure(editor.points,
-                                                            editor.fill,
-                                                            selected_index=editor.selected_index,
-                                                            mouse_xy=mouse_rel_pos))
+                                      + self._draw_structure(editor.points,
+                                                             editor.fill,
+                                                             selected_index=editor.selected_index,
+                                                             mouse_xy=mouse_rel_pos))
             else:
                 editor.configure(relief="raised")
                 self._drawings_ids = (self._drawings_ids
-                                      + self.draw_structure(editor.points, editor.fill))
+                                      + self._draw_structure(editor.points, editor.fill))
 
         for editor in self._funnel_editors:
             if editor == active_editor:
                 editor.configure(relief="sunken")
                 self._drawings_ids = (self._drawings_ids
-                                        + self.draw_funnel(editor.position,
-                                                            editor.oval,
-                                                            mouse_rel_pos[0]))
+                                      + self._draw_funnel(editor.position,
+                                                          editor.oval,
+                                                          mouse_rel_pos[0]))
             else:
                 editor.configure(relief="raised")
                 if editor.position != 0:
                     self._drawings_ids = (self._drawings_ids
-                                          + self.draw_funnel(editor.position, editor.oval))
+                                          + self._draw_funnel(editor.position, editor.oval))
 
         for turret in self._turrets:
             self._drawings_ids = self._drawings_ids + self._draw_turret(turret)
@@ -259,10 +254,12 @@ class TopView(tk.Canvas):
         self.redraw(self._active_editor)
 
     def _on_notification(self, observable, event_type, event_info):
+        """Notifications comming from funnel and structure editors"""
         self._active_editor = observable
         self.redraw(observable)
 
     def _on_left_click(self, event):
+        """Send to the active editor the coordinates of a mouse click, in funnel coordinates"""
         if self._active_editor is not None:
             self._active_editor.update_to_coord(self._canvas_to_funnel((event.x, event.y)))
 

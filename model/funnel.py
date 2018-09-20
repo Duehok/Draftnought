@@ -8,6 +8,9 @@ class Funnel(Observable):
     Args:
         oval=False: round or oval funnel
         position=0: funnel position on the vertical axis. 0 is the center of the ship.
+    Attrs:
+        oval: if the funnel should be displayed as an oval, or not
+        position: Position of the funnel along the length of the ship, in funnel coordinates
     """
     def __init__(self, oval=False, position=0):
         super().__init__()
@@ -102,6 +105,8 @@ def parse_funnels(funnels_section):
 
     Args:
         funnels_section (dict): about the funnels straight from the parsed file
+    returns:
+        dict {"funnelname": {"Pos":number, "Oval":number}}
     """
     funnels = {}
     for k in funnels_section.keys():

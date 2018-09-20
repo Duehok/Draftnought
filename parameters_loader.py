@@ -1,8 +1,4 @@
-"""Centralize all the loading of data  from external files that are not in the ship file
-
-Contains default path for those files
-files in json format
-"""
+"""Centralize all the loading of data  from external files that are not in the ship file"""
 import json
 import logging
 import pathlib
@@ -57,17 +53,25 @@ class Parameters:
 
     Attributes:
         hulls_shapes (dict): for each ship type, a list of lines that define the hull outer line.
-            each line is a list of tuples (x, y) in relative coordinates
         ships_hlengths (dict): for each ship type, a dict {int:int} used to get the length
             from origin to bow
             The key is the biggest tonnage for which the length is still valid
             the value is the distance from origin to bow in funnel coordinates.
-        app_config (dict): program configuration
+        recent_files (dict): a ict of recently saved files, the side view zoom and offset for them,
+            and if the grid was displayed or not
+        turrets_positions (dict): for each turret positions, a list of (int,int)
+            that describe their possible positions. Relative coordinates.
+        turrets_outlines(dict): for each amount of gun per turret (0=casemate), the turret's outline
+            that will be drawn in the top view. Absolute coordinates
+        turrets_scale (dict): scale factor for the turret outlines, per gun caliber
+        zoom (number): how much should the side view be zoomed, ! multiplied by the ship half length
+        offset (number): by how much the side pict should be horizontally offset
+        grid (bool): if the grid was displayed or not when the ship file was saved
     """
     def __init__(self, ship_file_path):
         self._recent_files = read_json(schemas.RECENT_FILES_PATH,
-                                     schemas.RECENT_FILES_SCHEMA,
-                                     schemas.DEFAULT_RECENT_FILES)
+                                       schemas.RECENT_FILES_SCHEMA,
+                                       schemas.DEFAULT_RECENT_FILES)
         self.hulls_shapes = read_json(schemas.HULLS_SHAPES_PATH,
                                       schemas.HULLS_SHAPES_SCHEMA,
                                       schemas.DEFAULT_HULLS_SHAPES)
@@ -80,6 +84,10 @@ class Parameters:
         self.turrets_outlines = read_json(schemas.TURRETS_OUTLINES_PATH,
                                           schemas.TURRETS_OUTLINE_SCHEMA,
                                           schemas.DEFAULT_TURRETS_OUTLINE)
+        self.torpedo_outlines = read_json(schemas.TORPEDO_OUTLINES_PATH,
+                                          schemas.TORPEDO_OUTLINES_SCHEMA,
+                                          schemas.DEFAULT_TORPEDO_OUTLINES)
+
         raw_hlengths = read_json(schemas.HALF_LENGTHS_PATH,
                                  schemas.HALF_LENGTHS_SCHEMA,
                                  schemas.DEFAULT_HALF_LENGTHS)
@@ -88,7 +96,7 @@ class Parameters:
         for ship_type, lengths_dicts in raw_hlengths.items():
             self.ships_hlengths[ship_type] = convert_str_key_to_int(lengths_dicts)
 
-        #if the requested file is in the list of recent files, 
+        #if the requested file is in the list of recent files,
         #use its zoom and offset for the side pict
         #if not, use the moset recent file if it exists
         #if not, default values
@@ -99,6 +107,7 @@ class Parameters:
         self.grid = self.file_param("grid")
 
     def file_param(self, param):
+        """set default value for recent file parameter"""
         if self._current_file_path in self._recent_files.keys():
             return self._recent_files[self._current_file_path][param]
         if self._recent_files:
@@ -108,17 +117,15 @@ class Parameters:
 
 
 
-    def write_app_param(self, path=None):
+    def write_app_param(self, current_file_path):
         """write the application config to a file
 
         Args:
-            new_parameters (dict): new set of parameters to write.
-                If not given, the current parameters are written.
-            file_path (str): path to the file that should be created or overwritten.
-                If not given, the default file path is used.
+            current_file_path (str): path to the file for the current ship.
+                used to rcord the path of the recently saved files
         """
-        if path is not None:
-            self._current_file_path = path
+        if current_file_path is not None:
+            self._current_file_path = current_file_path
         if self._current_file_path in self._recent_files.keys():
             del self._recent_files[self._current_file_path]
         if pathlib.Path(self._current_file_path).exists():
@@ -127,9 +134,8 @@ class Parameters:
             self._recent_files[self._current_file_path]["offset"] = self.offset
             self._recent_files[self._current_file_path]["grid"] = self.grid
         if len(self._recent_files) > MAX_RECENT_FILES:
-            self._recent_files = {f:self._recent_files[f] 
-                                  for f in list(
-                                                self._recent_files.keys())[len(self._recent_files)
+            self._recent_files = {f:self._recent_files[f]
+                                  for f in list(self._recent_files.keys())[len(self._recent_files)
                                                                            -MAX_RECENT_FILES:]}
 
         try:
@@ -140,16 +146,24 @@ class Parameters:
                 details.info("Saved app parameters to %s", schemas.RECENT_FILES_PATH)
         except OSError as error:
             summary.warning("Could not save app config file to: %s", schemas.RECENT_FILES_PATH)
-            details.warning("Could not save app config file to: %s\n%s", schemas.RECENT_FILES_PATH, error)
+            details.warning("Could not save app config file to: %s\n%s",
+                            schemas.RECENT_FILES_PATH, error)
 
     @property
     def last_file_path(self):
+        """path to the most recently saved file.
+        returns an empty string if there are none
+        does NOT check if the file exists
+        """
         if self._recent_files:
             return list(self._recent_files.keys())[-1]
         return ""
 
     @property
     def current_file_path(self):
+        """Path to the current file. Probably the same as the last savedfile path
+        Might actually be useless
+        """
         return self._current_file_path
 
 def convert_str_key_to_int(data):

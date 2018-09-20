@@ -18,7 +18,7 @@ import parameters_loader
 summary = logging.getLogger("Summary")
 summary.setLevel(logging.DEBUG)
 
-log_filename = pathlib.Path(appdirs.user_data_dir("Drafnought")).joinpath("log.txt")
+log_filename = pathlib.Path(appdirs.user_data_dir("Draftnought")).joinpath("log.txt")
 if not log_filename.exists():
     log_filename.parent.mkdir(parents=True, exist_ok=True)
 details = logging.getLogger("Details")
@@ -27,28 +27,15 @@ file_handler = logging.handlers.RotatingFileHandler(
     log_filename, maxBytes=500*1000, backupCount=5)
 details.addHandler(file_handler)
 
-
 _MAIN_ROW = 0
 
 _LOG_ROW = _MAIN_ROW +1
 
-_SIDEVIEW_ROW = 0
-_TOPVIEW_ROW = _SIDEVIEW_ROW+1
-_SIDEVIEW_COL = 1
-_TOPVIEW_COL = _SIDEVIEW_COL
-
-_FUNNELS_ROW = _TOPVIEW_ROW+1
-
-_STRUCT_EDITORS_ROW = _FUNNELS_ROW+1
-
 class MainWindow(tk.Tk):
-    """Base class for the whole UI
-
-    Args:
-        parameters (parameters_loader.Parameters): all the parameters for the app and the ship data
-    """
+    """Base class for the whole UI"""
     def __init__(self):
         super().__init__()
+        self.winfo_toplevel().title("Draftnought")
         self.iconbitmap('icon.ico')
         self.resizable(False, False)
         self.command_stack = CommandStack()
@@ -111,13 +98,11 @@ class MainWindow(tk.Tk):
             self.center_frame.set_grid(bool(self.grid_var.get()))
 
     def do_undo(self, *_args):
-        """undo last command, or deeper in the undoing stack
-        """
+        """undo last command, or deeper in the undoing stack"""
         self.command_stack.undo()
 
     def do_redo(self, *_args):
-        """redo last command, or deeper in the redoing stack
-        """
+        """redo last command, or deeper in the redoing stack"""
         self.command_stack.redo()
 
     def do_load(self, *_args):
@@ -134,8 +119,7 @@ class MainWindow(tk.Tk):
         self.do_save_as()
 
     def do_save(self, *_args):
-        """Save the current file to the same path
-        """
+        """Save the current file to the same path"""
         self.do_save_as(self.parameters.current_file_path)
 
     def load(self, path):
@@ -146,26 +130,30 @@ class MainWindow(tk.Tk):
                 If none is given, a dialog box is opened to choose it.
         """
         summary.debug("loading %s", path)
+        #save old parameters in case something goes wrong
+        old_parameters = self.parameters
         self.parameters = parameters_loader.Parameters(path)
         try:
             with open(path) as file:
                 self.current_ship_data = sd.ShipData(file, self.parameters)
         except sd.ShipFileInvalidException as error:
-            details.error("The file is not correctly formatted to be a ship file!\n%s\n%s",
+            details.error("The file is not correctly formatted to be a ship file:\n%s\n%s",
                           path, error)
-            summary.error("The file is not correctly formatted to be a ship file!")
+            summary.error("The file is not correctly formatted to be a ship file:"
+                          "\n%s\nPlease load it in-game and save it again", path)
+            self.parameters = old_parameters
             return
 
         summary.info("loading successful!")
         self.center_frame.destroy()
         #reset the command stack
         new_command_stack = CommandStack()
-        #TODO: handle last loading failure
         self.center_frame = ShipEditor(self,
                                        self.current_ship_data,
                                        new_command_stack,
                                        self.parameters)
         self.center_frame.grid(row=_MAIN_ROW)
+
         #if load was OK, forget the old command stack
         self.command_stack = new_command_stack
         self.grid_var.set(int(self.parameters.grid))
@@ -181,14 +169,21 @@ class MainWindow(tk.Tk):
                 If none given, a file picker dialog allows to choose a new or existing file
         """
         if path is None:
-            file = filedialog.asksaveasfile(mode='w', filetypes=(("ship files", "*.*d"),
-                                                                 ("all files", "*.*")))
+            current_file_path = self.parameters.current_file_path
+            if not current_file_path:
+                return
+            extension = pathlib.Path(current_file_path).suffix
+            file = filedialog.asksaveasfile(defaultextension=extension,
+                                            initialdir=pathlib.Path(current_file_path).parent,
+                                            initialfile=pathlib.Path(current_file_path).name,
+                                            filetypes=(("ship files", extension),
+                                                       ("all files", "*.*")))
             if file is not None:
                 summary.debug("saving file to %s", file.name)
                 self.current_ship_data.write_as_ini(file_object=file)
                 file.close()
                 self.parameters.write_app_param(file.name)
-        else:
+        elif path:
             summary.debug("saving file to %s", path)
             try:
                 with open(path, "w") as file:
@@ -209,34 +204,38 @@ class ShipEditor(tk.Frame):
     Args:
         parent (tk.Frame): parent frame in which the editor willbe displayed
         ship_data (shipdata.ShipData):
+        command_stack (CommandStack): the  redo/undo  command stack common to the whole program
         parameters (parameters_loader.Parameters): all the parameters for the app and the ship data
     """
     def __init__(self, parent, ship_data, command_stack, parameters):
         super().__init__(parent)
-
+        self.grid_rowconfigure(0, weight=1)
         funnels_editors = []
         for index, funnel in enumerate(ship_data.funnels.values()):
             funnel_editor = funnelseditor.FunnelEditor(self, funnel, index, command_stack)
-            funnel_editor.grid(row=_FUNNELS_ROW, column=index, sticky=tk.W+tk.E)
+            funnel_editor.grid(row=(index//2)+1, column=index%2, sticky=tk.W+tk.E)
             funnels_editors.append(funnel_editor)
-        index_structure = 0
         st_editors = []
-        for index_structure, structure in enumerate(ship_data.structures):
+        for index, structure in enumerate(ship_data.structures):
             new_st_display = structeditor.StructEditor(self, structure, command_stack)
-            new_st_display.grid(row=_STRUCT_EDITORS_ROW, column=index_structure)
+            new_st_display.grid(row=(index//2)+3, column=index%2)
             st_editors.append(new_st_display)
 
-        self._top_view = topview.TopView(self, ship_data, st_editors,
+        views = tk.Frame(self)
+        self._side_view = sideview.SideView(views, ship_data, parameters)
+        self._side_view.grid(row=0, column=0)
+
+        self._top_view = topview.TopView(views, ship_data, st_editors,
                                          funnels_editors, command_stack, parameters)
-        self._top_view.grid(row=_TOPVIEW_ROW, columnspan=4)
+        self._top_view.grid(row=1, column=0)
+
+        views.grid(row=0, column=2, rowspan=5)
 
         st_editors[0]._on_get_focus()
 
-        self._side_view = sideview.SideView(self, ship_data, parameters)
-        self._side_view.grid(row=_SIDEVIEW_ROW, columnspan=4)
-
     def set_grid(self, grid_state):
-        self._side_view.switch_grid(grid_state)
+        """set the grid for both top and side view according to grid_state"""
+        self._side_view.refresh_grid(grid_state)
         self._top_view.switch_grid(grid_state)
 
 

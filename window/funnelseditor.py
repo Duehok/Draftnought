@@ -37,7 +37,7 @@ class FunnelEditor(tk.Frame, Subscriber, Observable):
         pos_entry = Entry(self, textvariable=self._position_var, width=6)
         pos_entry.grid(row=1, column=1, sticky=tk.W)
         pos_entry.bind("<FocusIn>", self._update)
-        Checkbutton(self, text="Is Oval", variable=self._oval_var).grid(row=1,column=2)
+        Checkbutton(self, text="Is Oval", variable=self._oval_var).grid(row=1, column=2)
 
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=1)

@@ -4,8 +4,9 @@ import configparser
 import pathlib
 from math import pi
 from PIL import Image
-from  model.structure import Structure
-from  model.funnel import funnels_as_ini_section, parse_funnels
+from model.structure import Structure
+from model.turrets_torps import Turret, Torpedo
+from model.funnel import funnels_as_ini_section, parse_funnels
 
 #superstructures and funnels have different coordinates system
 #I decide to use the funnel
@@ -30,10 +31,19 @@ class ShipData:
         file (str): path to the file to be read.
         parameters (parameters_loader.parameters): dict with the configurable parameters.
             Needs "ships_hlengths", see parameters_loaders or the default files for more info
+    Attrs:
+        structures (list): list of all model.Structure
+        turrets (list): list of all Turret
+        funnels (dict): dict of all funnels.
+            {"funnelname": {"Pos":number, "Oval":number}}
+        half_length (int): lengths from center to bow, in funnel coordinates
+        ship_type (string): ship type, like "BC", "DD"...
+        side_pict (PIL.Image or None): A PIL Image if a side picture path was set in the file,
+            and this path can be found and read as a picture. Else None
     """
     def __init__(self, file, parameters):
         self.structures = []
-        self.turrets = []
+        self.turrets_torps = []
         self.funnels = {}
         self.path = pathlib.Path(file.name)
         #parser as self to help write back the file
@@ -69,15 +79,22 @@ class ShipData:
                             if k > displacement][0]
 
         turret_data = {}
+        torps = []
         for section, section_content in self._parser.items():
             if "Superstructure" in section:
                 new_struct = Structure(section, section_content)
                 self.structures.append(new_struct)
             elif "Turret" in section:
                 turret_data[self._parser[section]["Pos"]] = self._parser[section].getint("Guns")
+            elif "TorpedoMount" in section:
+                if int(section_content["Tubes"]) >= 1:
+                    new_torp = Torpedo(section_content, self.half_length, parameters)
+                    torps.append(new_torp)
 
-        self.turrets = [Turret(caliber, k, v, self.half_length, turret_data, parameters)
-                        for k, v in turret_data.items()]
+
+        self.turrets_torps = [Turret(caliber, k, v, self.half_length, turret_data, parameters)
+                              for k, v in turret_data.items()] + torps
+
 
         self.funnels = parse_funnels(self._parser["Funnels"])
 
@@ -112,69 +129,6 @@ class ShipData:
         else:
             with open(self.path.resolve(), "w") as file:
                 self._parser.write(file, space_around_delimiters=False)
-
-class Turret:
-    """Container for the data needed to draw a turret
-        TODO: describe args
-    """
-    def __init__(self, caliber, pos, guns, ship_hlength, all_turrs, parameters):
-        to_bow = parameters.turrets_positions[pos]["to_bow"]
-        scale = parameters.turrets_scale[caliber]
-
-        #logic to move the turrets
-        rel_position = parameters.turrets_positions[pos]["positions"][0]
-
-        if pos == "X":
-            if ("W" in all_turrs or "V" in all_turrs or
-                    "R" in all_turrs or "C" in all_turrs):
-                rel_position = parameters.turrets_positions[pos]["positions"][1]
-
-        elif pos == "W":
-            if ("X" in all_turrs or "V" in all_turrs or "B" in all_turrs):
-                rel_position = parameters.turrets_positions[pos]["positions"][1]
-
-        elif pos == "A":
-            if("V" in all_turrs or
-               {"W", "X", "Y"}.issubset(all_turrs) or
-               "C" in all_turrs and "X" in all_turrs or
-               "B" in all_turrs and "R" in all_turrs and (
-                   ("W" in all_turrs or "X" in all_turrs or "Y" in all_turrs))):
-                rel_position = parameters.turrets_positions[pos]["positions"][2]
-            elif ("X" in all_turrs or  "W" in all_turrs or
-                  "B" in all_turrs and ("C" in all_turrs or "R" in all_turrs or "W" in all_turrs)):
-                rel_position = parameters.turrets_positions[pos]["positions"][1]
-
-        elif pos == "B":
-            if("V" in all_turrs or
-               "W" in all_turrs or
-               "C" in all_turrs and ("X" in all_turrs or "Y" in all_turrs) or
-               "A" in all_turrs and "R" in all_turrs and ("X" in all_turrs or "Y" in all_turrs)):
-                rel_position = parameters.turrets_positions[pos]["positions"][2]
-            elif ("X" in all_turrs or "Y" in all_turrs or "C" in all_turrs or "R" in all_turrs):
-                rel_position = parameters.turrets_positions[pos]["positions"][1]
-
-        elif pos == "Y":
-            if (("X" in all_turrs and "W" in all_turrs.keys()) or
-                    ("V" in all_turrs and "W"in all_turrs)):
-                rel_position = parameters.turrets_positions[pos]["positions"][3]
-            elif ("V" in all_turrs or "W" in all_turrs or
-                  ({"A", "B", "C"}.issubset(all_turrs)) or
-                  ({"A", "B", "R"}.issubset(all_turrs))):
-                rel_position = parameters.turrets_positions[pos]["positions"][2]
-            elif ("B" in all_turrs or "C" in all_turrs or "R" in all_turrs or "X" in all_turrs):
-                rel_position = parameters.turrets_positions[pos]["positions"][1]
-
-        position = (rel_position[0]*ship_hlength, rel_position[1]*ship_hlength)
-        raw_outline = parameters.turrets_outlines[guns]
-        #rotate if the turret should be backward
-        if not to_bow:
-            rotated_outline = [(point[0], -point[1]) for point in raw_outline]
-        else:
-            rotated_outline = raw_outline
-        #scale according to gun caliber
-        scaled_outline = [(point[0]*scale, point[1]*scale) for point in rotated_outline]
-        #move according to position
-        self.outline = [(point[0]+position[0], point[1]+position[1]) for point in scaled_outline]
 
 class ShipFileInvalidException(Exception):
     """Errors that can be raised while reading a ship data file"""

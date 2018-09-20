@@ -7,3 +7,5 @@ COPY icon.ico .\dist\icon.ico
 COPY "README.md" ".\dist\README.md"
 COPY LICENSE .\dist\LICENSE
 xcopy /s /i ".\data" ".\dist\data"
+rmdir %localappdata%\Draftnought /s /q
+.\dist\Draftnought.exe

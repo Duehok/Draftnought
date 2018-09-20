@@ -34,9 +34,9 @@ class StructEditor(tk.Frame, Subscriber, Observable):
         style = Style()
         style.configure("Treeview.Heading", font=(None, 16))
 
-        self._tree.column("#", minwidth=20, width=40)
-        self._tree.column("X", minwidth=20, width=40)
-        self._tree.column("Y", minwidth=20, width=40)
+        self._tree.column("#", minwidth=20, width=40, anchor=tk.CENTER)
+        self._tree.column("X", minwidth=20, width=40, anchor=tk.CENTER)
+        self._tree.column("Y", minwidth=20, width=40, anchor=tk.CENTER)
         self._tree.heading("#", text="#")
         self._tree.heading("X", text="\u21d5")
         self._tree.heading("Y", text="\u21d4")
@@ -151,15 +151,16 @@ class EditZone(tk.Frame):
     Args:
         parent (tk.Frame): widget that is the parent of the editor
         struct_editor (StructEditor): the struct_editor instance in which this widget will be placed
+        command_stack (Command Stack): the undo/redo stack common to the whole programm
+        on_get_focus (function): a function that takes no args called when this widget get the focus
     """
-    #TODO: rename constants with an underscore_
-    FILL_CHECK_ROW = 0
-    POINT_INDEX_ROW = FILL_CHECK_ROW+1
-    X_ROW = POINT_INDEX_ROW+1
-    Y_ROW = X_ROW+1
-    ADD_ROW = Y_ROW+1
-    DEL_ROW = ADD_ROW+1
-    SYMM_ROW = DEL_ROW+1
+    _FILL_CHECK_ROW = 0
+    _POINT_INDEX_ROW = _FILL_CHECK_ROW+1
+    _X_ROW = _POINT_INDEX_ROW+1
+    _Y_ROW = _X_ROW+1
+    _ADD_ROW = _Y_ROW+1
+    _DEL_ROW = _ADD_ROW+1
+    _SYMM_ROW = _DEL_ROW+1
 
     def __init__(self, parent, structure, command_stack, on_get_focus):
         tk.Frame.__init__(self, parent)
@@ -169,21 +170,21 @@ class EditZone(tk.Frame):
         self._fill_var.set(self._structure.fill)
 
         (Checkbutton(self, text="Fill", variable=self._fill_var)
-         .grid(row=EditZone.FILL_CHECK_ROW, column=0, columnspan=2))
+         .grid(row=EditZone._FILL_CHECK_ROW, column=0, columnspan=2))
 
         self._fill_var.trace_add("write", self._set_fill)
 
         self._point_index = -1
         self._point_index_var = tk.StringVar()
         top_label = Label(self, textvariable=self._point_index_var)
-        top_label.grid(row=EditZone.POINT_INDEX_ROW, column=0, columnspan=2)
+        top_label.grid(row=EditZone._POINT_INDEX_ROW, column=0, columnspan=2)
         top_label.bind("<Button-1>", on_get_focus)
 
         x_label = Label(self, text="\u21d5:")
-        x_label.grid(row=EditZone.X_ROW, column=0, sticky=tk.E)
+        x_label.grid(row=EditZone._X_ROW, column=0, sticky=tk.E)
         x_label.bind("<Button-1>", on_get_focus)
         y_label = Label(self, text="\u21d4:")
-        y_label.grid(row=EditZone.Y_ROW, column=0, sticky=tk.E)
+        y_label.grid(row=EditZone._Y_ROW, column=0, sticky=tk.E)
         y_label.bind("<Button-1>", on_get_focus)
         #the updating_ booleans allow to detect if the stringvars are edited
         #because the point is selected
@@ -193,21 +194,21 @@ class EditZone(tk.Frame):
         self.editable_y = tk.StringVar()
 
         setx = Entry(self, textvariable=self.editable_x, width=6)
-        setx.grid(row=EditZone.X_ROW, column=1, sticky=tk.W)
+        setx.grid(row=EditZone._X_ROW, column=1, sticky=tk.W)
         setx.bind("<FocusIn>", on_get_focus)
         sety = Entry(self, textvariable=self.editable_y, width=6)
-        sety.grid(row=EditZone.Y_ROW, column=1, sticky=tk.W)
+        sety.grid(row=EditZone._Y_ROW, column=1, sticky=tk.W)
         sety.bind("<FocusIn>", on_get_focus)
 
         self.editable_x.trace_add("write", self._point_edited)
         self.editable_y.trace_add("write", self._point_edited)
 
-        (Button(self, text="Add Point", command=self._add_point)
-         .grid(row=EditZone.ADD_ROW, column=0, columnspan=2))
+        (Button(self, text="Add Vertex", command=self._add_point)
+         .grid(row=EditZone._ADD_ROW, column=0, columnspan=2, sticky=tk.E+tk.W))
         (Button(self, text="Delete", command=self._delete_point)
-         .grid(row=EditZone.DEL_ROW, column=0, columnspan=2))
-        (Button(self, text="Apply Symmetry", command=self._apply_symmetry)
-         .grid(row=EditZone.SYMM_ROW, column=0, columnspan=2))
+         .grid(row=EditZone._DEL_ROW, column=0, columnspan=2, sticky=tk.E+tk.W))
+        (Button(self, text="Symmetry", command=self._apply_symmetry)
+         .grid(row=EditZone._SYMM_ROW, column=0, columnspan=2, sticky=tk.E+tk.W))
 
     def set_editable_point(self, point_index):
         """Called when another point is selected
@@ -242,7 +243,7 @@ class EditZone(tk.Frame):
     def _point_edited(self, _var_name, _list_index, _operation):
         """called back by the stringvar of the point's coordinates
 
-        the parameters are there only to swallow the events' params
+        the args are there only to swallow the events' params
         """
         #update the point only if:
         #- the user edited the var (not just a point selection)
@@ -258,7 +259,7 @@ class EditZone(tk.Frame):
         """Called when the user switch from filled structure to lines only or the opposite
 
         Update the structure with the new state
-        the parameters are there only to swallow the events' params
+        the args are there only to swallow the events' params
         """
         self.command_stack.do(model.structure.SetFill(self._structure, bool(self._fill_var.get())))
 
@@ -280,6 +281,7 @@ class EditZone(tk.Frame):
         self.command_stack.do(model.structure.AddPoint(self._structure, self._point_index+1, 0, 0))
 
     def _apply_symmetry(self):
+        """Make the whole structure symmetrical"""
         self.command_stack.do(model.structure.ApplySymmetry(self._structure))
 
 def is_float(possible_number):

@@ -53,8 +53,12 @@
 		"positions": [[0.183,0.2]],
 		"to_bow":true
 		},
+	"P":{
+		"positions": [[0,-0.132]],
+		"to_bow":false
+		},
 	"Q":{
-		"positions": [[0,-0,-0.0]],
+		"positions": [[0.0,-0.0]],
 		"to_bow":false
 		},
 	"S":{

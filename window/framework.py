@@ -1,5 +1,4 @@
-"""Helper classes for everybody
-"""
+"""Helper classes for everybody"""
 from abc import ABC, abstractmethod
 
 class Command(ABC):
@@ -13,19 +12,16 @@ class Command(ABC):
 
     @abstractmethod
     def execute(self):
-        """execute the command
-        """
+        """execute the command"""
         pass
 
     @abstractmethod
     def undo(self):
-        """undo the command
-        """
+        """undo the command"""
         pass
 
 class CommandStack:
-    """Undo/redo stacks for command pattern
-    """
+    """Undo/redo stacks for command pattern"""
     def __init__(self):
         self._undo_stack = []
         self._redo_stack = []
@@ -61,8 +57,7 @@ class CommandStack:
             command.execute()
 
 class Observable:
-    """Observable for the observer pattern
-    """
+    """Observable for the observer pattern"""
     def __init__(self):
         self._subscribers = []
 

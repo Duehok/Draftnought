@@ -4,7 +4,7 @@ import tkinter as tk
 from PIL import Image, ImageTk, ImageDraw
 
 _WIDTH = 701
-_HEIGHT = 201
+_MAX_HEIGHT = 5000
 _GRID_STEPS = 25
 _GRID_RGBA = (0, 0, 0, 125)
 
@@ -17,25 +17,31 @@ class SideView(tk.Canvas):
     Args:
         parent (tk.Frame): the parent frame where the picture goes
         shipdata (model.shipdata): shipdata that has, or does not have, a side_pict
+        parameters: all the parameters for the program
     """
     def __init__(self, parent, ship_data, parameters):
-        (parent)
         self._parameters = parameters
         if ship_data.side_pict:
             self._image = ship_data.side_pict
-            borderwidth=2
+            borderwidth = 2
         else:
-            self._image = Image.new(mode="RGBA",size=(1,1),color=(0, 0, 0, 0))
-            borderwidth=0
+            self._image = Image.new(mode="RGBA", size=(1, 1), color=(0, 0, 0, 0))
+            borderwidth = 0
         self._tkimage = ImageTk.PhotoImage(self._image)
-        super().__init__(parent, width=_WIDTH, height=self._tkimage.height(), cursor="fleur", borderwidth=borderwidth)
-
-        self._image_id = self.create_image((0, 0), image=self._tkimage, anchor=tk.NW)
+        height = min(self._tkimage.height(), _MAX_HEIGHT)
+        super().__init__(parent,
+                         width=_WIDTH,
+                         height=height,
+                         cursor="fleur",
+                         borderwidth=borderwidth)
+        image_center = (parameters.offset, round(self._image.height/2.0))
+        self._image_id = self.create_image(image_center, image=self._tkimage)
         self.grid()
         self.bind("<Motion>", self._on_move)
         self.bind("<ButtonPress-1>", self._on_click)
         self.bind("<ButtonRelease-1>", self._on_unclick)
         self._left_button_down = False
+        self._half_length = ship_data.half_length
 
         self._grid_on = False
         self._grid = make_grid(self.winfo_reqwidth(), self.winfo_reqheight())
@@ -43,24 +49,30 @@ class SideView(tk.Canvas):
 
         self.bind("<MouseWheel>", self._on_mousewheel)
         self._re_zoom(self._parameters.zoom)
-        self.coords(self._image_id, *self._parameters.offset)
+
 
     def _on_click(self, event):
+        """Mark the start of the pan
+        no pan along y axis
+        """
         self._left_button_down = True
-        self.scan_mark(event.x, event.y)
+        self.scan_mark(event.x, 0)
 
     def _on_unclick(self, _event):
         self._left_button_down = False
 
     def _on_move(self, event):
+        """If the button is down, pan the view
+        no pan along y axis
+        """
         if self._left_button_down:
-            self.scan_dragto(event.x, event.y, gain=1)
-            pict_ccord = self.coords(self._image_id)
-            self._parameters.offset = (-self.canvasx(-pict_ccord[0]),
-                                       -self.canvasy(-pict_ccord[1]))
-            self.switch_grid(self._grid_on)
+            self.scan_dragto(event.x, 0, gain=1)
+            pict_coord = self.coords(self._image_id)
+            self._parameters.offset = -self.canvasx(-pict_coord[0])
+            self.refresh_grid(self._grid_on)
 
     def _on_mousewheel(self, event):
+        """Mouse wheel changes the zoom"""
         if event.delta > 0:
             self._parameters.zoom = self._parameters.zoom*1.01
         else:
@@ -68,23 +80,34 @@ class SideView(tk.Canvas):
         self._re_zoom(self._parameters.zoom)
 
     def _re_zoom(self, new_zoom):
-        offset = self.coords(self._image_id)
-        self.delete(self._image_id)
-        new_size = [round(coord*new_zoom) for coord in  self._image.size]
+        """When changing zoom, redraw the pict to the new zoom, resize the canvas"""
+        corrected_zoom = new_zoom/self._half_length
+        new_size = [round(coord*corrected_zoom) for coord in  self._image.size]
         self._tkimage = ImageTk.PhotoImage(self._image.resize(new_size))
-        self._image_id = self.create_image(*offset, image=self._tkimage, anchor=tk.NW)
-        self.switch_grid(self._grid_on)
+        height = min(self._tkimage.height(), _MAX_HEIGHT)
+        self.configure(height=height)
+        offset = (self.coords(self._image_id)[0], round(self.winfo_reqheight()/2.0))
+        self.delete(self._image_id)
+        self._image_id = self.create_image(*offset, image=self._tkimage)
+        self._parameters.offset = -self.canvasx(-self.coords(self._image_id)[0])
+        self.refresh_grid(self._grid_on)
 
 
-    def switch_grid(self, grid_on):
-        """Display or hide the grid according to grid_on"""
+    def refresh_grid(self, grid_on):
+        """Update the grid according to grid_on
+        Resize the grid if the previous grid was too small
+        No resize if the grid is too big!
+        """
         self._grid_on = grid_on
         if self._grid_id != -1:
             self.delete(self._grid_id)
         if grid_on:
+            if (self._grid.height() < self.winfo_reqheight() or
+                    self._grid.width() < self.winfo_reqwidth()):
+                self._grid = make_grid(self.winfo_reqwidth(), self.winfo_reqheight())
             self._grid_id = self.create_image((self.canvasx(0),
-                                                       self.canvasy(0)),
-                                                      image=self._grid, anchor=tk.NW)
+                                               self.canvasy(0)),
+                                              image=self._grid, anchor=tk.NW)
 
 def make_grid(width, height, horizontal=False):
     """Build a semi-transparent grid in a picture
