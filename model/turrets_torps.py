@@ -23,15 +23,18 @@ class Turret:
 
         position = (rel_position[0]*half_length, rel_position[1]*half_length)
         raw_outline = parameters.turrets_outlines[guns]
-        #rotate if the turret should be backward
+        #mirror if the turret should be backward
         if not to_bow:
-            rotated_outline = [(point[0], -point[1]) for point in raw_outline]
+            mirrored_outline = [(vertex[0], -vertex[1]) for vertex in raw_outline]
         else:
-            rotated_outline = raw_outline
+            mirrored_outline = raw_outline
+        #also mirror if the turret is to starboard
+        if position[0] >0:
+            mirrored_outline = [(-vertex[0], vertex[1]) for vertex in mirrored_outline]
         #scale according to gun caliber
-        scaled_outline = [(point[0]*scale, point[1]*scale) for point in rotated_outline]
+        scaled_outline = [(vertex[0]*scale, vertex[1]*scale) for vertex in mirrored_outline]
         #move according to position
-        self.outline = [(point[0]+position[0], point[1]+position[1]) for point in scaled_outline]
+        self.outline = [(vertex[0]+position[0], vertex[1]+position[1]) for vertex in scaled_outline]
 
 def rel_tur_or_torp_position(pos, all_turrs, parameters):
     """Apply the game's logic to get a turret or toorp mount position
