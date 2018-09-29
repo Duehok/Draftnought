@@ -15,7 +15,7 @@ class FunnelEditor(tk.Frame, Subscriber, Observable):
         command_stack (framework.Command_stack): undo/redo stack
     """
     def __init__(self, parent, funnel, index, command_stack):
-        tk.Frame.__init__(self, parent, borderwidth=4)
+        tk.Frame.__init__(self, parent, borderwidth=4, relief="raised")
         Subscriber.__init__(self, funnel)
         Observable.__init__(self)
         self._funnel = funnel
@@ -28,23 +28,43 @@ class FunnelEditor(tk.Frame, Subscriber, Observable):
         self._oval_var.trace_add("write", self._switch_oval)
 
         self._update()
-        self.bind("<Button-1>", self._update)
+        self.bind("<Button-1>", self._on_click)
 
-        Checkbutton(self, text=f"Funnel n°{index}:  ", variable=self._active_var).grid(columnspan=3)
+        is_active = Checkbutton(self, text=f"Funnel n°{index}:  ", variable=self._active_var)
+        is_active.grid(columnspan=3)
+        is_active.bind("<FocusIn>", self._on_get_focus)
+        is_active.bind("<FocusOut>", self._on_lost_focus)
+
         pos_label = Label(self, text="  Position: ")
         pos_label.grid(sticky=tk.E)
-        pos_label.bind("<Button-1>", self._update)
-        pos_entry = Entry(self, textvariable=self._position_var, width=6)
-        pos_entry.grid(row=1, column=1, sticky=tk.W)
-        pos_entry.bind("<FocusIn>", self._update)
-        Checkbutton(self, text="Is Oval", variable=self._oval_var).grid(row=1, column=2)
+        pos_label.bind("<Button-1>", self._on_click)
 
+        self._pos_entry = Entry(self, textvariable=self._position_var, width=6)
+        self._pos_entry.grid(row=1, column=1, sticky=tk.W)
+        self._pos_entry.bind("<FocusIn>", self._on_get_focus)
+        self._pos_entry.bind("<FocusOut>", self._on_lost_focus)
+
+        is_oval = Checkbutton(self, text="Is Oval", variable=self._oval_var)
+        is_oval.grid(row=1, column=2)
+        is_oval.bind("<FocusIn>", self._on_get_focus)
+        is_oval.bind("<FocusOut>", self._on_lost_focus)
+        
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=1)
         self.columnconfigure(2, weight=1)
 
+    def _on_click(self, _event):
+        self._pos_entry.focus_set()
+
     def _on_notification(self, observable, event_type, event_info):
         self._update()
+
+    def _on_lost_focus(self, event):
+        self.configure(relief="raised")
+
+    def _on_get_focus(self, *_args):
+        self.configure(relief="sunken")
+        self._notify("Focus", {})
 
     def _update(self, *_args):
         """Set all the displayed info to what is in the funnel data

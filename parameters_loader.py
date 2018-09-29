@@ -102,9 +102,12 @@ class Parameters:
         #if not, default values
         #Starting python 3.7, dicts are ordered by insert order
         self._current_file_path = ship_file_path
-        self.zoom = self.file_param("zoom")
-        self.offset = self.file_param("offset")
+        self.sideview_zoom = self.file_param("sideview_zoom")
+        self.sideview_offset = self.file_param("sideview_offset")
         self.grid = self.file_param("grid")
+        self.topview_zoom = self.file_param("topview_zoom")
+        self.topview_offset = self.file_param("topview_offset")
+
 
     def file_param(self, param):
         """set default value for recent file parameter"""
@@ -130,9 +133,11 @@ class Parameters:
             del self._recent_files[self._current_file_path]
         if pathlib.Path(self._current_file_path).exists():
             self._recent_files[self._current_file_path] = {}
-            self._recent_files[self._current_file_path]["zoom"] = self.zoom
-            self._recent_files[self._current_file_path]["offset"] = self.offset
+            self._recent_files[self._current_file_path]["sideview_zoom"] = self.sideview_zoom
+            self._recent_files[self._current_file_path]["sideview_offset"] = self.sideview_offset
             self._recent_files[self._current_file_path]["grid"] = self.grid
+            self._recent_files[self._current_file_path]["topview_zoom"] = self.topview_zoom
+            self._recent_files[self._current_file_path]["topview_offset"] = self.topview_offset
         if len(self._recent_files) > MAX_RECENT_FILES:
             self._recent_files = {f:self._recent_files[f]
                                   for f in list(self._recent_files.keys())[len(self._recent_files)

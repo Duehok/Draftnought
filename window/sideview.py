@@ -2,13 +2,14 @@
 
 import tkinter as tk
 from PIL import Image, ImageTk, ImageDraw
+from window.framework import Subscriber
 
 _WIDTH = 701
 _MAX_HEIGHT = 5000
 _GRID_STEPS = 25
 _GRID_RGBA = (0, 0, 0, 125)
 
-class SideView(tk.Canvas):
+class SideView(tk.Canvas, Subscriber):
     """Display the side view picture if one is defined in the ship data
 
     Can pan with mouse drag
@@ -19,8 +20,9 @@ class SideView(tk.Canvas):
         shipdata (model.shipdata): shipdata that has, or does not have, a side_pict
         parameters: all the parameters for the program
     """
-    def __init__(self, parent, ship_data, parameters):
+    def __init__(self, parent, ship_data, parameters, sideview):
         self._parameters = parameters
+        Subscriber.__init__(self, sideview)
         if ship_data.side_pict:
             self._image = ship_data.side_pict
             borderwidth = 2
@@ -29,17 +31,22 @@ class SideView(tk.Canvas):
             borderwidth = 0
         self._tkimage = ImageTk.PhotoImage(self._image)
         height = min(self._tkimage.height(), _MAX_HEIGHT)
-        super().__init__(parent,
-                         width=_WIDTH,
-                         height=height,
-                         cursor="fleur",
-                         borderwidth=borderwidth)
-        image_center = (parameters.offset, round(self._image.height/2.0))
+        tk.Canvas.__init__(self, parent,
+                           width=_WIDTH,
+                           height=height,
+                           cursor="fleur",
+                           borderwidth=borderwidth,
+                           xscrollincrement=1,
+                           yscrollincrement=1
+                           )
+
+        self.xview(tk.SCROLL, round(parameters.sideview_offset), tk.UNITS)
+
+        image_center = (0, round(self._image.height/2.0))
         self._image_id = self.create_image(image_center, image=self._tkimage)
         self.grid()
-        self.bind("<Motion>", self._on_move)
+        self.bind("<B1-Motion>", self._on_move)
         self.bind("<ButtonPress-1>", self._on_click)
-        self.bind("<ButtonRelease-1>", self._on_unclick)
         self._left_button_down = False
         self._half_length = ship_data.half_length
 
@@ -48,36 +55,29 @@ class SideView(tk.Canvas):
         self._grid_id = -1
 
         self.bind("<MouseWheel>", self._on_mousewheel)
-        self._re_zoom(self._parameters.zoom)
-
+        self._re_zoom(self._parameters.sideview_zoom)
 
     def _on_click(self, event):
         """Mark the start of the pan
         no pan along y axis
         """
-        self._left_button_down = True
         self.scan_mark(event.x, 0)
-
-    def _on_unclick(self, _event):
-        self._left_button_down = False
 
     def _on_move(self, event):
         """If the button is down, pan the view
         no pan along y axis
         """
-        if self._left_button_down:
-            self.scan_dragto(event.x, 0, gain=1)
-            pict_coord = self.coords(self._image_id)
-            self._parameters.offset = -self.canvasx(-pict_coord[0])
-            self.refresh_grid(self._grid_on)
+        self.scan_dragto(event.x, 0, gain=1)
+        self._parameters.sideview_offset = self.canvasx(0)
+        self.refresh_grid(self._grid_on)
 
     def _on_mousewheel(self, event):
         """Mouse wheel changes the zoom"""
         if event.delta > 0:
-            self._parameters.zoom = self._parameters.zoom*1.01
+            self._parameters.sideview_zoom = self._parameters.sideview_zoom*1.01
         else:
-            self._parameters.zoom = self._parameters.zoom*0.99
-        self._re_zoom(self._parameters.zoom)
+            self._parameters.sideview_zoom = self._parameters.sideview_zoom*0.99
+        self._re_zoom(self._parameters.sideview_zoom)
 
     def _re_zoom(self, new_zoom):
         """When changing zoom, redraw the pict to the new zoom, resize the canvas"""
@@ -89,9 +89,8 @@ class SideView(tk.Canvas):
         offset = (self.coords(self._image_id)[0], round(self.winfo_reqheight()/2.0))
         self.delete(self._image_id)
         self._image_id = self.create_image(*offset, image=self._tkimage)
-        self._parameters.offset = -self.canvasx(-self.coords(self._image_id)[0])
+        self._parameters.sideview_offset = self.canvasx(0)
         self.refresh_grid(self._grid_on)
-
 
     def refresh_grid(self, grid_on):
         """Update the grid according to grid_on
@@ -108,6 +107,15 @@ class SideView(tk.Canvas):
             self._grid_id = self.create_image((self.canvasx(0),
                                                self.canvasy(0)),
                                               image=self._grid, anchor=tk.NW)
+
+    def _on_notification(self, observable, event_type, event_info):
+        if event_type == "Drag":
+            self.xview(tk.SCROLL, round(event_info["x"]), tk.UNITS)
+            self._parameters.sideview_offset = self.canvasx(0)
+            self.refresh_grid(self._grid_on)
+        if event_type == "Apply_zoom":
+            self._parameters.sideview_zoom = self._parameters.sideview_zoom*event_info["factor"]
+            self._re_zoom(self._parameters.sideview_zoom)
 
 def make_grid(width, height, horizontal=False):
     """Build a semi-transparent grid in a picture

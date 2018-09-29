@@ -4,13 +4,14 @@
 """
 import tkinter as tk
 from window.sideview import make_grid
+from window.framework import Observable
 
 _HFUNNELS_TO_HLENGTH = 0.028
 _FUNNEL_OVAL = 1.38
 _WIDTH = 701
-_HEIGHT = 201
+_HEIGHT = 301
 
-class TopView(tk.Canvas):
+class TopView(tk.Canvas, Observable):
     """Everything having to do with the area displaying the top view of the ship
 
     The ship is displayed with bow at the left
@@ -35,13 +36,21 @@ class TopView(tk.Canvas):
                            width=_WIDTH,
                            height=_HEIGHT,
                            borderwidth=2,
-                           relief="ridge", cursor="crosshair")
+                           relief="ridge", cursor="crosshair",
+                           xscrollincrement=1,
+                           yscrollincrement=1)
+        Observable.__init__(self)
 
+        self._parameters = parameters
         self.command_stack = command_stack
+        self._half_length = ship_data.half_length
+
+        self.xview(tk.SCROLL, round(parameters.topview_offset[0]), tk.UNITS)
+        self.yview(tk.SCROLL, round(parameters.topview_offset[1]), tk.UNITS)
 
         self._funnel_to_canvas, self._canvas_to_funnel = self.make_converters(ship_data.half_length)
 
-        self._display_hull(parameters.hulls_shapes[ship_data.ship_type], ship_data.half_length)
+        self._display_hull(parameters.hulls_shapes[ship_data.ship_type], self._half_length)
         self._drawings_ids = []
         self._active_editor = None
 
@@ -60,10 +69,15 @@ class TopView(tk.Canvas):
         self._grid_on = False
 
         self.redraw()
+
+        self._dragging = False
         self.bind("<Motion>", self._on_mouse_move)
+        self.bind("<B1-Motion>", self._on_drag)
         self.bind("<Enter>", self._on_mouse_move)
         self.bind("<Leave>", self._on_mouse_move)
-        self.bind("<Button-1>", self._on_left_click)
+        self.bind("<ButtonPress-1>", self._on_click)
+        self.bind("<ButtonRelease-1>", self._on_left_release)
+        self.bind("<MouseWheel>", self._on_mousewheel)
 
     def make_converters(self, half_length):
         """give converters from funnel to canvas coordinates and vice-versa
@@ -78,7 +92,7 @@ class TopView(tk.Canvas):
                 funnel to canvas
                 canvas ti funnel
         """
-        coord_factor = (self.winfo_reqwidth()/2.1)/half_length
+        coord_factor = (self.winfo_reqwidth()/2.1)/half_length*self._parameters.topview_zoom
         xoffset = self.winfo_reqwidth()/2.0
         yoffset = self.winfo_reqheight()/2.0
 
@@ -206,8 +220,9 @@ class TopView(tk.Canvas):
             active_editor: the struct or funnel editor that is currently active.
                 this editor will get the mouse clicks to modify the funnel or structure.
         """
-        mouse_x = self.winfo_pointerx() - self.winfo_rootx()
-        mouse_y = self.winfo_pointery() - self.winfo_rooty()
+
+        mouse_x = self.winfo_pointerx() - self.winfo_rootx() + self.canvasx(0)
+        mouse_y = self.winfo_pointery() - self.winfo_rooty() + self.canvasy(0)
         if (mouse_x >= 0 and mouse_y >= 0
                 and mouse_x <= self.winfo_width() - 1 and mouse_y <= self.winfo_height() - 1):
             mouse_rel_pos = (mouse_x, mouse_y)
@@ -220,26 +235,22 @@ class TopView(tk.Canvas):
 
         for editor in self._struct_editors:
             if editor == active_editor:
-                editor.configure(relief="sunken")
                 self._drawings_ids = (self._drawings_ids
                                       + self._draw_structure(editor.points,
                                                              editor.fill,
                                                              selected_index=editor.selected_index,
                                                              mouse_xy=mouse_rel_pos))
             else:
-                editor.configure(relief="raised")
                 self._drawings_ids = (self._drawings_ids
                                       + self._draw_structure(editor.points, editor.fill))
 
         for editor in self._funnel_editors:
             if editor == active_editor:
-                editor.configure(relief="sunken")
                 self._drawings_ids = (self._drawings_ids
                                       + self._draw_funnel(editor.position,
                                                           editor.oval,
                                                           mouse_rel_pos[0]))
             else:
-                editor.configure(relief="raised")
                 if editor.position != 0:
                     self._drawings_ids = (self._drawings_ids
                                           + self._draw_funnel(editor.position, editor.oval))
@@ -248,20 +259,50 @@ class TopView(tk.Canvas):
             self._drawings_ids = self._drawings_ids + self._draw_turret(turret)
 
         if self._grid_on:
-            self._drawings_ids.append(self.create_image((0, 0), image=self._grid, anchor=tk.NW))
+            self._drawings_ids.append(self.create_image((self.canvasx(0),
+                                                         self.canvasy(0)),
+                                                        image=self._grid,
+                                                        anchor=tk.NW))
+
+    def _on_drag(self, event):
+        self._dragging = True
+        self.scan_dragto(event.x, event.y, gain=1)
+        new_offset = (self.canvasx(0), self.canvasy(0))
+        x_move = new_offset[0] - self._parameters.topview_offset[0]
+        self._parameters.topview_offset = new_offset
+        self._notify("Drag", {"x":x_move})
 
     def _on_mouse_move(self, _event):
-        self.redraw(self._active_editor)
+        if not self._dragging:
+            self.redraw(self._active_editor)
 
-    def _on_notification(self, observable, event_type, event_info):
+    def _on_mousewheel(self, event):
+        """Mouse wheel changes the zoom"""
+        if event.delta > 0:
+            factor = 1.05
+        else:
+            factor = 0.95
+        self.scale("all", self.winfo_reqwidth()/2.0, self.winfo_reqheight()/2.0, factor, factor)
+        self._parameters.topview_zoom = self._parameters.topview_zoom*factor
+        self._notify("Apply_zoom", {"factor":factor})
+        self._funnel_to_canvas, self._canvas_to_funnel = self.make_converters(self._half_length)
+
+    def _on_notification(self, observable, _event_type, _event_info):
         """Notifications comming from funnel and structure editors"""
         self._active_editor = observable
         self.redraw(observable)
 
-    def _on_left_click(self, event):
+    def _on_click(self, event):
+        self.scan_mark(event.x, event.y)
+
+    def _on_left_release(self, event):
         """Send to the active editor the coordinates of a mouse click, in funnel coordinates"""
+        if self._dragging:
+            self._dragging = False
+            return
         if self._active_editor is not None:
-            self._active_editor.update_to_coord(self._canvas_to_funnel((event.x, event.y)))
+            self._active_editor.update_to_coord(self._canvas_to_funnel((event.x + self.canvasx(0),
+                                                                        event.y + self.canvasy(0))))
 
     def switch_grid(self, grid_on):
         """Add or remove the grid according to the state of grid_on"""

@@ -33,15 +33,15 @@ start main.py
 ## Requirements to build
   Python>=3.6
   Windows 7+ for the build batch file
-  Tested on win 7 and 8.1, nothing else.
+  Tested on win 8.1, nothing else.
 
 ## Build:
 run build.bat
 
 ## Limitations and TODO list
+  - add pan and zoom to top and bottom views
   - probable presence of bugs in the turret position logic
   - only one style of turrets, so the turret's outlines will not be exactly what you see in the game
   - secondaries are not shown
-  - casemate guns have the same outline as the one gun turrets
   - turrets positions, ship lengths are unaccurate
   - recent files should be shown in the menu

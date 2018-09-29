@@ -170,19 +170,35 @@ RECENT_FILES_SCHEMA = (
       "type": "object",
       "properties":
       {
-        "zoom":{"type":"number"},
+        "sideview_zoom":{"type":"number"},
+        "sideview_offset":{"type":"number"},
         "grid":{"type":"boolean"},
-        "offset":{"type":"number"}
+        "topview_zoom":{"type":"number"},
+        "topview_offset":{
+          "type":"array",
+          "items":[{"type":"number"}],
+          "maxItems":2,
+          "minItems":2
+        }
       },
       "additionalProperties": False,
-      "required":["zoom", "grid", "offset"]
+      "required":
+      [
+        "sideview_zoom", 
+        "grid", 
+        "sideview_offset",
+        "topview_zoom",
+        "topview_offset"
+      ]
     }
   }
 )
 
 DEFAULT_RECENT_FILES ={}
 DEFAULT_PARAM = {
-    "zoom":1.2571630183484306*257,
-    "offset":350,
-    "grid":True
+    "sideview_zoom":1.2571630183484306*257,
+    "sideview_offset":-350,
+    "grid":True,
+    "topview_zoom":1.0,
+    "topview_offset":(0, 0)
 }
