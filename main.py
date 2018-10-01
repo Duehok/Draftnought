@@ -152,7 +152,10 @@ class MainWindow(tk.Tk):
                                        self.current_ship_data,
                                        new_command_stack,
                                        self.parameters)
-        self.center_frame.grid(row=_MAIN_ROW)
+        self.center_frame.grid(row=_MAIN_ROW, column=0, sticky=tk.N+tk.E+tk.S+tk.W)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(_MAIN_ROW, weight=1)
+        self.resizable(True, True)
 
         #if load was OK, forget the old command stack
         self.command_stack = new_command_stack
@@ -209,7 +212,6 @@ class ShipEditor(tk.Frame):
     """
     def __init__(self, parent, ship_data, command_stack, parameters):
         super().__init__(parent)
-        self.grid_rowconfigure(0, weight=1)
         funnels_editors = []
         for index, funnel in enumerate(ship_data.funnels.values()):
             funnel_editor = funnelseditor.FunnelEditor(self, funnel, index, command_stack)
@@ -224,12 +226,17 @@ class ShipEditor(tk.Frame):
         views = tk.Frame(self)
         self._top_view = topview.TopView(views, ship_data, st_editors,
                                          funnels_editors, command_stack, parameters)
-        self._top_view.grid(row=1, column=0)
+        self._top_view.grid(row=1, column=0, sticky=tk.N+tk.E+tk.S+tk.W)
 
         self._side_view = sideview.SideView(views, ship_data, parameters, self._top_view)
-        self._side_view.grid(row=0, column=0)
+        self._side_view.grid(row=0, column=0, sticky=tk.N+tk.E+tk.S+tk.W)
+        views.columnconfigure(0, weight=1)
+        views.rowconfigure(0, weight=1)
+        views.rowconfigure(1, weight=1)
 
-        views.grid(row=0, column=2, rowspan=5)
+        views.grid(row=0, column=2, rowspan=5, sticky=tk.N+tk.W+tk.S+tk.E)
+        self.rowconfigure(0, weight=1)
+        self.columnconfigure(2, weight=1)
 
         st_editors[0].focus_set()
 

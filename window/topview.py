@@ -9,7 +9,7 @@ from window.framework import Observable
 _HFUNNELS_TO_HLENGTH = 0.028
 _FUNNEL_OVAL = 1.38
 _WIDTH = 701
-_HEIGHT = 301
+_HEIGHT = 261
 
 class TopView(tk.Canvas, Observable):
     """Everything having to do with the area displaying the top view of the ship
@@ -258,11 +258,20 @@ class TopView(tk.Canvas, Observable):
         for turret in self._turrets:
             self._drawings_ids = self._drawings_ids + self._draw_turret(turret)
 
+        self.refresh_grid()
+
+    def refresh_grid(self):
+        """Update the grid according to grid_on
+        Resize the grid if the previous grid was too small
+        No resize if the grid is too big!
+        """
         if self._grid_on:
-            self._drawings_ids.append(self.create_image((self.canvasx(0),
-                                                         self.canvasy(0)),
-                                                        image=self._grid,
-                                                        anchor=tk.NW))
+            if (self._grid.height() < self.winfo_height() or
+                    self._grid.width() < self.winfo_width()):
+                self._grid = make_grid(self.winfo_width(), self.winfo_height(), horizontal=True)
+            self._drawings_ids.append( self.create_image((self.canvasx(0),
+                                                self.canvasy(0)),
+                                                image=self._grid, anchor=tk.NW))
 
     def _on_drag(self, event):
         self._dragging = True
